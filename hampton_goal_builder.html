@@ -1,0 +1,2113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hampton Design Team Goal Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{--hampton-blue:#1B4FA8;--hampton-gold:#F5C518;--hampton-gold-dark:#C49A10;--hampton-blue-light:#E8EFF9;--hampton-blue-mid:#3B6DD4;--bg:#F7F6F2;--surface:#FFFFFF;--surface-2:#F0EDE6;--text:#1A1916;--text-muted:#6B6860;--text-light:#9B9890;--border:rgba(26,25,22,0.1);--border-strong:rgba(26,25,22,0.2);--success:#2D7D46;--success-bg:#EAF5EE;--warn:#B45309;--warn-bg:#FEF3C7;--empty:#D1CFC8;--radius:10px;--radius-sm:6px}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px;line-height:1.6}
+.header{background:var(--hampton-blue);padding:0;display:flex;align-items:stretch}
+.header-accent{width:8px;background:var(--hampton-gold);flex-shrink:0}
+.header-content{padding:16px 24px;display:flex;align-items:center;gap:14px;flex:1;justify-content:space-between}
+.header-left{display:flex;align-items:center;gap:14px}
+.header-badge{width:40px;height:40px;background:var(--hampton-gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'DM Serif Display',serif;font-size:20px;color:var(--hampton-blue);font-weight:400;flex-shrink:0}
+.header-text h1{font-family:'DM Serif Display',serif;font-size:18px;color:#fff;font-weight:400;line-height:1.2}
+.header-text p{font-size:11px;color:rgba(255,255,255,0.6);font-weight:300;letter-spacing:0.04em;text-transform:uppercase;margin-top:2px}
+.header-actions{display:flex;gap:8px;align-items:center}
+.hbtn{padding:7px 14px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;border:1.5px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff}
+.hbtn:hover{background:rgba(255,255,255,0.2)}
+.hbtn.gold{background:var(--hampton-gold);border-color:var(--hampton-gold);color:var(--hampton-blue)}
+.hbtn.gold:hover{background:#e0b214}
+.save-indicator{font-size:11px;color:rgba(255,255,255,0.5);display:flex;align-items:center;gap:5px}
+.save-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.3);transition:background 0.3s}
+.save-dot.saved{background:#52c97a}
+
+.goal-nav{display:flex;align-items:center;gap:10px;padding:10px 28px;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:0 1px 3px rgba(26,25,22,0.04);position:relative;z-index:2}
+.goal-nav-tabs{display:flex;align-items:center;gap:8px;flex:1;min-width:0;overflow-x:auto;padding-bottom:2px}
+.goal-tab{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1.5px solid var(--border-strong);border-radius:999px;background:var(--surface);color:var(--text-muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;white-space:nowrap;max-width:230px}
+.goal-tab:hover{border-color:var(--hampton-blue);color:var(--hampton-blue);background:var(--hampton-blue-light)}
+.goal-tab.active{background:var(--hampton-blue);border-color:var(--hampton-blue);color:#fff;box-shadow:0 4px 12px rgba(27,79,168,0.18)}
+.goal-tab-num{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:999px;background:rgba(27,79,168,0.12);color:var(--hampton-blue);font-size:11px;font-weight:700;flex-shrink:0}
+.goal-tab.active .goal-tab-num{background:var(--hampton-gold);color:var(--hampton-blue)}
+.goal-tab-label{overflow:hidden;text-overflow:ellipsis}
+.goal-tab-close{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:999px;margin-left:1px;font-size:13px;line-height:1;background:rgba(255,255,255,0.16);color:inherit;flex-shrink:0}
+.goal-tab-close:hover{background:rgba(255,255,255,0.3)}
+.goal-nav-add{padding:7px 12px;border:1.5px dashed var(--border-strong);border-radius:999px;background:var(--surface);color:var(--hampton-blue);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+.goal-nav-add:hover:not(:disabled){border-style:solid;background:var(--hampton-blue-light)}
+.goal-nav-add:disabled{opacity:0.45;cursor:not-allowed;color:var(--text-light)}
+.goal-active-banner{display:flex;align-items:center;gap:11px;margin:12px 28px 0;padding:11px 15px;border:1.5px solid rgba(27,79,168,0.2);border-left:6px solid var(--hampton-gold);border-radius:999px;background:linear-gradient(90deg,var(--hampton-blue-light),rgba(255,255,255,0.9));box-shadow:0 5px 18px rgba(27,79,168,0.08);position:relative;z-index:1}
+.goal-active-banner-badge{display:inline-flex;align-items:center;justify-content:center;padding:5px 11px;border-radius:999px;background:var(--hampton-blue);color:#fff;font-size:12px;font-weight:700;letter-spacing:0.01em;white-space:nowrap}
+.goal-active-banner-title{font-size:14px;font-weight:700;color:var(--hampton-blue);line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.goal-active-banner-hint{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--hampton-blue);background:#fff;border:1px solid rgba(27,79,168,0.18);border-radius:999px;padding:4px 9px;white-space:nowrap}
+@media (max-width:760px){.goal-nav{padding:10px 16px;align-items:flex-start;flex-direction:column}.goal-nav-tabs{width:100%}.goal-active-banner{margin:10px 16px 0;border-radius:16px;align-items:flex-start;flex-wrap:wrap}.goal-active-banner-title{white-space:normal}.goal-active-banner-hint{margin-left:auto}}
+.layout{display:grid;grid-template-columns:1fr 270px;gap:0;height:calc(100vh - 76px - 58px - 62px);overflow:hidden}
+.main-form{overflow-y:auto;padding:24px 28px}
+.sidebar{background:var(--surface);border-left:1px solid var(--border);overflow-y:auto;padding:18px 16px}
+.sidebar-title{font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-light);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.integrity-item{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1px solid var(--border)}
+.integrity-item:last-child{border-bottom:none}
+.integrity-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;margin-top:5px;transition:background 0.3s ease}
+.dot-empty{background:var(--empty)}.dot-partial{background:var(--hampton-gold)}.dot-complete{background:var(--success)}
+.integrity-label{font-size:12px;color:var(--text-muted)}
+.integrity-label strong{display:block;color:var(--text);font-weight:500;font-size:12.5px;margin-bottom:1px}
+.integrity-hint{font-size:10.5px;color:var(--warn);display:none;margin-top:2px;line-height:1.3}
+.score-bar{margin:12px 0 16px;background:var(--surface-2);border-radius:6px;padding:11px 12px}
+.score-label{font-size:10px;color:var(--text-muted);font-weight:500;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:7px}
+.score-track{background:var(--border);height:5px;border-radius:3px;overflow:hidden;margin-bottom:5px}
+.score-fill{height:100%;border-radius:3px;background:var(--empty);transition:width 0.4s ease,background 0.3s ease;width:0%}
+.score-fill.partial{background:var(--hampton-gold)}.score-fill.good{background:var(--hampton-blue-mid)}.score-fill.complete{background:var(--success)}
+.score-value{font-size:11px;color:var(--text-muted);text-align:right}
+.section{margin-bottom:24px}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.section-number{width:24px;height:24px;background:var(--hampton-blue);color:#fff;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.section-title{font-size:14px;font-weight:600;color:var(--text);letter-spacing:0.01em}
+.section-desc{font-size:12.5px;color:var(--text-muted);margin-bottom:11px;line-height:1.5}
+label{display:block;font-size:12px;font-weight:500;color:var(--text-muted);margin-bottom:4px;letter-spacing:0.01em}
+input[type=text],textarea,select{width:100%;font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--text);background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:8px 11px;outline:none;transition:border-color 0.2s;line-height:1.5}
+textarea{resize:vertical;min-height:68px}
+input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-blue);box-shadow:0 0 0 3px rgba(27,79,168,0.1)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.form-field{margin-bottom:11px}
+.goal-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.goal-pill{padding:5px 11px;border-radius:20px;border:1.5px solid var(--border-strong);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.2s;background:var(--surface);color:var(--text-muted);user-select:none}
+.goal-pill:hover{border-color:var(--hampton-blue);color:var(--hampton-blue);background:var(--hampton-blue-light)}
+.goal-pill.active{background:var(--hampton-blue);border-color:var(--hampton-blue);color:#fff}
+.outcomes-dropdown{background:var(--hampton-blue-light);border:1px solid rgba(27,79,168,0.2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:11px;display:none}
+.outcomes-dropdown p{font-size:11.5px;color:var(--hampton-blue);font-weight:600;margin-bottom:7px;text-transform:uppercase;letter-spacing:0.05em}
+.outcome-option{display:block;padding:5px 8px;border-radius:4px;font-size:12.5px;color:var(--hampton-blue);cursor:pointer;transition:background 0.15s;user-select:none}
+.outcome-option:hover{background:rgba(27,79,168,0.1)}
+.outcome-option.selected{background:var(--hampton-blue);color:#fff;border-radius:4px}
+.competency-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px}
+.competency-chip,.scale-option,.team-chip{padding:7px 9px;border-radius:var(--radius-sm);border:1.5px solid var(--border-strong);font-size:11.5px;font-weight:500;cursor:pointer;transition:all 0.2s;background:var(--surface);color:var(--text-muted);text-align:center;user-select:none;line-height:1.3}
+.competency-chip:hover{border-color:var(--hampton-gold-dark);color:var(--hampton-gold-dark);background:#FFFBEB}
+.competency-chip.active{background:var(--hampton-gold);border-color:var(--hampton-gold);color:var(--hampton-blue)}
+.pillar-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:11px}
+.scale-selector{display:flex;gap:7px;flex-wrap:wrap}
+.scale-option{padding:5px 13px;border-radius:20px}
+.scale-option:hover{border-color:var(--hampton-blue-mid);color:var(--hampton-blue-mid)}
+.scale-option.active{background:var(--hampton-blue-mid);border-color:var(--hampton-blue-mid);color:#fff}
+.milestone-item{display:flex;align-items:center;gap:8px;padding:8px 11px;background:var(--hampton-blue-light);border:1.5px solid rgba(27,79,168,0.25);border-radius:var(--radius-sm);margin-bottom:5px}
+.milestone-item::before{content:'✓';font-size:11px;font-weight:700;color:var(--hampton-blue);flex-shrink:0}
+.milestone-month{width:56px;font-size:11px;font-weight:600;color:var(--hampton-blue);border:none!important;box-shadow:none!important;padding:0!important;background:transparent;cursor:pointer}
+.milestone-input{border:none!important;box-shadow:none!important;padding:0!important;font-size:13px;flex:1;background:transparent}
+.remove-btn{background:none;border:none;cursor:pointer;color:var(--text-light);font-size:16px;padding:0 2px;line-height:1;transition:color 0.2s;flex-shrink:0}
+.remove-btn:hover{color:#c0392b}
+.add-milestone-btn{background:none;border:1.5px dashed var(--border-strong);border-radius:var(--radius-sm);padding:6px 14px;font-family:'DM Sans',sans-serif;font-size:12.5px;color:var(--text-muted);cursor:pointer;width:100%;transition:all 0.2s;margin-top:4px}
+.add-milestone-btn:hover{border-color:var(--hampton-blue);color:var(--hampton-blue);background:var(--hampton-blue-light)}
+.milestone-suggest-area{margin-bottom:12px;display:none}
+.milestone-suggest-header{display:flex;align-items:center;margin-bottom:8px}
+.milestone-suggest-label{font-size:12px;font-weight:600;color:var(--hampton-blue)}
+.milestone-chips{display:flex;flex-direction:column;gap:5px}
+.milestone-chip{display:flex;align-items:center;gap:9px;padding:7px 11px;background:var(--surface);border:1.5px solid var(--border-strong);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.2s;text-align:left}
+.milestone-chip:hover{border-color:var(--hampton-blue);background:var(--hampton-blue-light)}
+.milestone-chip.used{opacity:0.35;pointer-events:none}
+.milestone-chip-month{font-size:11px;font-weight:700;color:var(--hampton-blue);background:var(--hampton-blue-light);border-radius:4px;padding:2px 6px;flex-shrink:0;min-width:32px;text-align:center}
+.milestone-chip-text{font-size:12.5px;color:var(--text);flex:1;line-height:1.4}
+.roles-table{width:100%;border-collapse:collapse}
+.roles-table th{font-size:10.5px;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:0.06em;padding:0 8px 7px;text-align:left;border-bottom:1px solid var(--border)}
+.roles-table td{padding:5px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.roles-table td input{border:none;padding:3px 0;font-size:12.5px;background:transparent;width:100%}
+.roles-table td input:focus{box-shadow:none;border-bottom:1.5px solid var(--hampton-blue);border-radius:0}
+.add-row-btn{background:none;border:none;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--hampton-blue);cursor:pointer;padding:7px 0 0;font-weight:500}
+.add-row-btn:hover{text-decoration:underline}
+.roles-suggest-area{background:var(--surface-2);border-radius:var(--radius-sm);padding:11px 13px}
+.roles-suggest-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.roles-suggest-label{font-size:12px;font-weight:600;color:var(--hampton-blue)}
+.roles-chips{display:flex;flex-direction:column;gap:5px}
+.role-chip{display:flex;align-items:stretch;background:var(--surface);border:1.5px solid var(--border-strong);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.2s;overflow:hidden;text-align:left;font-family:'DM Sans',sans-serif}
+.role-chip:hover{border-color:var(--hampton-blue);background:var(--hampton-blue-light)}
+.role-chip.used{opacity:0.35;pointer-events:none}
+.role-chip-resp{flex:1;padding:7px 11px;font-size:12.5px;color:var(--text);line-height:1.4}
+.role-chip-when{padding:7px 10px;font-size:11px;font-weight:700;color:var(--hampton-blue);background:var(--hampton-blue-light);border-left:1px solid rgba(27,79,168,0.15);display:flex;align-items:center;white-space:nowrap;flex-shrink:0}
+.role-chip-type{padding:7px 8px;font-size:10px;font-weight:600;color:var(--text-light);display:flex;align-items:center;white-space:nowrap;flex-shrink:0;text-transform:uppercase;letter-spacing:0.05em}
+.role-del-btn{background:none;border:none;color:var(--text-light);cursor:pointer;font-size:16px;line-height:1;padding:2px 6px;transition:color 0.2s;width:100%}
+.role-del-btn:hover{color:#c0392b}
+
+
+
+.field-hint{font-size:12px;color:var(--text-light);font-style:italic;margin-bottom:5px;line-height:1.5;background:var(--surface-2);border-radius:4px;padding:5px 9px;border-left:2px solid var(--border-strong)}
+.ev-workstream-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.ev-ws-label{font-size:12px;color:var(--text-muted);font-weight:500;white-space:nowrap}
+.wt-btn{padding:5px 12px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--border-strong);border-radius:20px;background:var(--surface);color:var(--text-muted);transition:all 0.2s}
+.wt-btn:hover{border-color:var(--hampton-blue);color:var(--hampton-blue)}
+.wt-btn.active{background:var(--hampton-blue);border-color:var(--hampton-blue);color:#fff}
+.ev-suggest-header{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.ev-suggestion-chip{padding:5px 10px;border-radius:20px;background:var(--surface);border:1.5px solid var(--border-strong);font-size:12px;color:var(--text-muted);cursor:pointer;transition:all 0.2s;display:inline-flex;align-items:center;gap:5px}
+.ev-suggestion-chip:hover{border-color:var(--hampton-blue);color:var(--hampton-blue);background:var(--hampton-blue-light)}
+.ev-suggestion-chip .ev-tier-pip{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.ev-suggestion-chip.used{opacity:0.35;pointer-events:none}
+.added-evidence-list{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.ev-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px}
+.ev-item-top{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px}
+.ev-tier-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.ev-t1{background:#F59E0B}.ev-t2{background:#0EA5E9}.ev-t3{background:#22C55E}.ev-t4{background:#A855F7}.ev-t0{background:var(--empty)}
+.ev-text{flex:1;font-size:13px;color:var(--text);line-height:1.4}
+.ev-tier-label{font-size:10px;font-weight:600;color:var(--text-light);flex-shrink:0;align-self:center}
+.ev-remove{background:none;border:none;color:var(--text-light);cursor:pointer;font-size:15px;line-height:1;padding:0 2px;flex-shrink:0}
+.ev-remove:hover{color:#c0392b}
+.ev-benchmark-row{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--success-bg);border-radius:4px}
+.ev-benchmark-row label{font-size:11px;font-weight:600;color:var(--success);white-space:nowrap;margin:0}
+.ev-benchmark-input{flex:1;border:none;border-bottom:1.5px solid rgba(45,125,70,0.3);padding:2px 4px;font-size:12px;color:var(--text);background:transparent;font-family:'DM Sans',sans-serif;outline:none}
+.ev-benchmark-input:focus{border-bottom-color:var(--success)}
+.ev-benchmark-input::placeholder{color:rgba(45,125,70,0.5);font-style:italic}
+.ev-add-row{display:flex;gap:8px;margin-top:4px}
+.timeline-vis{margin:11px 0;padding:12px;background:var(--surface-2);border-radius:var(--radius);overflow-x:auto}
+.timeline-track{display:flex;align-items:flex-start;min-width:380px;padding:6px 0 2px}
+.tl-month{flex:1;text-align:center;position:relative}
+.tl-dot{width:10px;height:10px;border-radius:50%;background:var(--border);margin:0 auto 5px;position:relative;z-index:2;transition:background 0.3s}
+.tl-dot.has-milestone{background:var(--hampton-blue);box-shadow:0 0 0 3px rgba(27,79,168,0.15)}
+.tl-dot.target-dot{background:var(--hampton-gold);box-shadow:0 0 0 3px rgba(245,197,24,0.3);color:var(--hampton-blue);font-size:8px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.tl-line.faded{background:var(--border);opacity:0.4}
+.tl-line{position:absolute;top:4px;left:50%;right:-50%;height:2px;background:var(--border);z-index:1}
+.tl-label{font-size:9px;color:var(--text-light);text-align:center}
+.tl-event{font-size:9px;color:var(--hampton-blue);font-weight:500;text-align:center;max-width:56px;margin:2px auto 0;line-height:1.2;min-height:14px;overflow:hidden}
+.divider{height:1px;background:var(--border);margin:24px 0}
+.action-row{display:flex;gap:9px;margin-top:6px;padding-bottom:36px}
+.btn-primary{background:var(--hampton-blue);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px 20px;font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:500;cursor:pointer;transition:background 0.2s}
+.btn-primary:hover{background:#163E8A}
+.btn-secondary{background:none;border:1.5px solid var(--border-strong);border-radius:var(--radius-sm);padding:9px 18px;font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--text-muted);cursor:pointer;transition:all 0.2s}
+.btn-secondary:hover{border-color:var(--hampton-blue);color:var(--hampton-blue)}
+.toast{position:fixed;bottom:22px;right:22px;padding:11px 18px;border-radius:var(--radius);font-size:13.5px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.12);transform:translateY(70px);opacity:0;transition:all 0.3s ease;z-index:1000}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{background:var(--success);color:#fff}
+.toast.info{background:var(--hampton-blue);color:#fff}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:12px;padding:28px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h2{font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--hampton-blue);margin-bottom:8px}
+.modal p{font-size:13.5px;color:var(--text-muted);margin-bottom:16px;line-height:1.6}
+
+
+
+
+
+
+
+
+.modal-footer{display:flex;justify-content:flex-end;gap:8px;padding-top:14px;border-top:1px solid var(--border)}
+.generating-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:600;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.generating-overlay.open{display:flex}
+.spinner{width:36px;height:36px;border:3px solid var(--hampton-blue-light);border-top-color:var(--hampton-blue);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gen-text{font-size:14px;color:var(--hampton-blue);font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-accent"></div>
+  <div class="header-content">
+    <div class="header-left">
+      <div class="header-badge">H</div>
+      <div class="header-text">
+        <h1>Design Team Goal Builder</h1>
+        <p>Hampton Township School District · SY 2026–27</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="hbtn" onclick="clearAll()">Clear Goal</button>
+      <button class="hbtn" onclick="exportPDF()">Export This Goal</button>
+      <button class="hbtn gold" onclick="exportAllGoalsPDF()">Export All Goals</button>
+    </div>
+  </div>
+</div>
+
+<!-- Multi-Goal Navigation -->
+<div class="goal-nav" id="goalNav">
+  <div class="goal-nav-tabs" id="goalNavTabs"></div>
+  <button class="goal-nav-add" id="goalNavAddBtn" onclick="addGoal()" title="Add another goal">＋ Add Goal</button>
+</div>
+
+<!-- Active Goal Banner -->
+<div class="goal-active-banner" id="goalActiveBanner">
+  <span class="goal-active-banner-badge" id="goalActiveBadge">Goal 1</span>
+  <span class="goal-active-banner-title" id="goalActiveTitle">Fill in the sections below to build your goal</span>
+  <span class="goal-active-banner-hint">Editing now</span>
+</div>
+
+<div class="layout">
+  <div class="main-form">
+
+    <!-- 1 Team Identity -->
+    <div class="section">
+      <div class="section-header"><div class="section-number">1</div><div class="section-title">Team Identity</div></div>
+      <p class="section-desc">Start here. Tell us which team you're on and who's leading the work.</p>
+      <div class="form-grid">
+        <div class="form-field">
+          <label>Design Team</label>
+          <select id="teamName" onchange="syncIdentityToOtherGoals();update()">
+            <option value="">Select your team…</option>
+            <option>Hampton High School (HHS)</option>
+            <option>Hampton Middle School (HMS)</option>
+            <option>Central Elementary</option>
+            <option>Poff Elementary</option>
+            <option>Wyland Elementary</option>
+            <option>Special Education</option>
+            <option>Assessment Team</option>
+            <option>District Guiding Coalition</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label>School Year</label>
+          <select id="schoolYear" onchange="syncIdentityToOtherGoals();update()">
+            <option>2026–27</option>
+            <option>2027–28</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Team Members</label>
+        <p class="field-hint">Enter the names of everyone on this design team, separated by commas. e.g., Maria Chen, James Wilson, Priya Okafor. Names entered here will be available to select in the Roles &amp; Responsibilities section.</p><input type="text" id="teamLead" oninput="updateMemberDropdowns();syncIdentityToOtherGoals();update()" />
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 2 Operational Plan -->
+    <div class="section">
+      <div class="section-header"><div class="section-number">2</div><div class="section-title">Operational Plan Connection</div></div>
+      <p class="section-desc">Select the district goal your design team work supports. Once you pick a goal, specific outcomes from the Operational Plan will appear — click one to use it, or type your own below.</p>
+      <div class="goal-pills" id="goalPills">
+        <div class="goal-pill" data-goal="1" onclick="selectGoal(this)">Goal 1: Portrait of a Talbot</div>
+        <div class="goal-pill" data-goal="2" onclick="selectGoal(this)">Goal 2: Recognizing Success</div>
+        <div class="goal-pill" data-goal="3" onclick="selectGoal(this)">Goal 3: Student Voice &amp; Choice</div>
+        <div class="goal-pill" data-goal="4" onclick="selectGoal(this)">Goal 4: Career Pathways</div>
+        <div class="goal-pill" data-goal="5" onclick="selectGoal(this)">Goal 5: Professional Learning</div>
+      </div>
+      <div class="outcomes-dropdown" id="outcomesDropdown">
+        <p>Suggested Outcomes — click to select</p>
+        <div id="outcomesList"></div>
+      </div>
+      <div class="form-field">
+        <label>Specific Outcome (confirm or refine above)</label>
+        <p class="field-hint">e.g., Expand student-led conferences to include more classrooms K–5 (you can edit this to match your team's focus)</p><input type="text" id="specificOutcome" oninput="update()" />
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 3 Goal -->
+    <div class="section">
+      <div class="section-header"><div class="section-number">3</div><div class="section-title">Design Team Goal</div></div>
+      <p class="section-desc">Write one clear goal sentence that names what your team will do, who will benefit, and why it matters. Aim for 15+ words. This is the anchor for everything else in this plan.</p>
+      <p class="field-hint">Format: Our design team will [action] in/by [scope or date] so that [student outcome]. Example: Our design team will implement student-led conferences in all K–2 classrooms by March 2027 so students can articulate their growth in Portrait of a Talbot competencies.</p><textarea id="teamGoal" rows="3" oninput="update()"></textarea>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 4 Competencies -->
+    <div class="section">
+      <div class="section-header"><div class="section-number">4</div><div class="section-title">Portrait of a Talbot Competencies</div></div>
+      <p class="section-desc">Select the Portrait of a Talbot competencies students will develop as a result of achieving this goal. Choose at least one — it's okay to select more than one.</p>
+      <div class="competency-grid">
+        <div class="competency-chip" onclick="toggleChip(this,'comp')">🤝 Collaboration</div>
+        <div class="competency-chip" onclick="toggleChip(this,'comp')">💬 Communication</div>
+        <div class="competency-chip" onclick="toggleChip(this,'comp')">🧠 Critical Thinking</div>
+        <div class="competency-chip" onclick="toggleChip(this,'comp')">❤️ Empathy</div>
+        <div class="competency-chip" onclick="toggleChip(this,'comp')">📚 Learner's Mindset</div>
+        <div class="competency-chip" onclick="toggleChip(this,'comp')">💪 Perseverance</div>
+      </div>
+    </div>
+
+    <!-- 5 Evidence -->
+    <div class="section">
+      <div class="section-header"><div class="section-number">5</div><div class="section-title">Evidence of Impact</div></div>
+      <p class="section-desc">Identify how you'll know this goal is working. First, tell us where you are in this work — that determines which types of evidence make the most sense. Then add your evidence and set a specific target for each one (e.g., "80% of students" or "all 3 grade levels by February").</p>
+
+      <div class="ev-workstream-row">
+        <span class="ev-ws-label">This goal is new or ongoing?</span>
+        <button class="wt-btn" id="wt-new" onclick="setWorkstream('new')">Brand new this year</button>
+        <button class="wt-btn" id="wt-building" onclick="setWorkstream('building')">Building on prior work</button>
+        <button class="wt-btn" id="wt-established" onclick="setWorkstream('established')">Well-established (2+ years)</button>
+      </div>
+
+      <div id="evSuggestionsArea" style="display:none;margin-bottom:14px;">
+        <div class="ev-suggest-header">
+          <span id="evSuggestLabel" style="font-size:12px;font-weight:600;color:var(--hampton-blue);">Suggested evidence — click any to add</span>
+        </div>
+        <div id="evSuggestionChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+      </div>
+
+      <div class="added-evidence-list" id="addedEvidenceList"></div>
+
+      <div class="ev-add-row">
+        <input type="text" id="evidenceInput" placeholder="Type your own evidence type and press Enter or click Add…" style="flex:1;" onkeydown="if(event.key==='Enter'){addEvidenceManual();}" oninput="update()" />
+        <button class="btn-secondary" onclick="addEvidenceManual()" style="white-space:nowrap;padding:8px 13px;font-size:12.5px;">+ Add</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 8 Timeline -->
+    <div class="section">
+      <div class="section-header"><div class="section-number">6</div><div class="section-title">Timeline & Key Milestones</div></div>
+      <p class="section-desc">Set your anticipated completion month — milestone suggestions will appear automatically based on your workstream type. Each milestone should be a specific action or checkpoint, not just a date. Add your own with the button below.</p>
+      <div class="form-field" style="margin-bottom:14px;">
+        <label>When do you expect to achieve this goal?</label>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <select id="goalCompletionMonth" onchange="update();renderTimeline();maybeShowMilestoneSuggestions()" style="width:auto;">
+            <option value="">Not sure yet</option>
+            <option>Sum</option><option>Aug</option><option>Sep</option><option>Oct</option>
+            <option>Nov</option><option>Dec</option><option>Jan</option><option>Feb</option>
+            <option>Mar</option><option>Apr</option><option>May</option><option>Jun</option>
+          </select>
+          <span id="completionHint" style="font-size:12px;color:var(--text-muted);font-style:italic;"></span>
+        </div>
+      </div>
+      <div class="timeline-vis"><div class="timeline-track" id="timelineVis"></div></div>
+
+      <div class="milestone-suggest-area" id="milestoneSuggestArea" style="display:none;">
+        <div class="milestone-suggest-header">
+          <span class="milestone-suggest-label">Suggested milestones — click any to add to your timeline</span>
+        </div>
+        <div class="milestone-chips" id="milestoneChips"></div>
+      </div>
+
+      <div id="milestoneListLabel" style="display:none;font-size:11px;font-weight:600;color:var(--hampton-blue);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;margin-top:14px;">Your milestones</div>
+      <div id="milestoneList"></div>
+      <button class="add-milestone-btn" onclick="addMilestone()">+ Add Milestone</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- 9 Roles -->
+    <div class="section">
+      <div class="section-header"><div class="section-number">7</div><div class="section-title">Roles & Responsibilities</div></div>
+      <p class="section-desc">Assign clear ownership for each part of this goal. Suggested responsibilities will appear automatically once you've added milestones — click any to add it to the table, then fill in who is accountable. Add rows directly using the table below.</p>
+
+      <div class="roles-suggest-area" id="rolesSuggestArea" style="display:none;margin-bottom:14px;">
+        <div class="roles-suggest-header">
+          <span class="roles-suggest-label">Suggested responsibilities — click any to add it to the table below</span>
+        </div>
+        <div class="roles-chips" id="rolesChips"></div>
+      </div>
+
+      <table class="roles-table">
+        <thead><tr><th style="width:28%">Team Member</th><th style="width:43%">Responsibility</th><th style="width:18%">By When</th><th style="width:11%"></th></tr></thead>
+        <tbody id="rolesTable">
+          <tr><td><input type="text" placeholder="Select or type name…" list="memberDatalist" oninput="update()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="update()" /></td><td><input type="text" placeholder="By when? (e.g., Oct, Ongoing)" oninput="sortRolesTable();update()" /></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">×</button></td></tr>
+          <tr><td><input type="text" list="memberDatalist" oninput="update()" /></td><td><input type="text" oninput="update()" /></td><td><input type="text" oninput="sortRolesTable();update()" /></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">×</button></td></tr>
+        </tbody>
+      </table>
+      <datalist id="memberDatalist"></datalist>
+      <button class="add-row-btn" onclick="addRoleRow()">+ Add Responsibility</button>
+    </div>
+    <div class="action-row">
+      <button class="btn-primary" onclick="addGoal()">+ Create Another Goal</button>
+      <button class="btn-primary" style="background:var(--hampton-gold);border-color:var(--hampton-gold);color:var(--hampton-blue);" onclick="exportAllGoalsPDF()" id="exportAllBtn">Export All Goals</button>
+      <button class="btn-secondary" onclick="exportPDF()">Export This Goal</button>
+      <button class="btn-secondary" onclick="clearAll()">Clear This Goal</button>
+    </div>
+
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-title">✦ Goal Integrity Check</div>
+    <div class="score-bar">
+      <div class="score-label">Overall Readiness</div>
+      <div class="score-track"><div class="score-fill" id="scoreFill"></div></div>
+      <div class="score-value" id="scoreValue">0 / 7 complete</div>
+    </div>
+    <div class="integrity-item"><div class="integrity-dot dot-empty" id="dot-goal"></div><div class="integrity-label"><strong>Design Team Goal</strong>Clear, specific goal statement<div class="integrity-hint" id="hint-goal">Aim for 15+ words: who, what, why</div></div></div>
+    <div class="integrity-item"><div class="integrity-dot dot-empty" id="dot-op"></div><div class="integrity-label"><strong>Operational Plan</strong>Goal + specific outcome linked<div class="integrity-hint" id="hint-op">Select a goal and name the outcome</div></div></div>
+    <div class="integrity-item"><div class="integrity-dot dot-empty" id="dot-comp"></div><div class="integrity-label"><strong>PoT Competencies</strong>At least one selected<div class="integrity-hint" id="hint-comp">Select at least 1 competency students will develop</div></div></div>
+    <div class="integrity-item"><div class="integrity-dot dot-empty" id="dot-evidence"></div><div class="integrity-label"><strong>Evidence of Impact</strong>At least 1 item + 1 benchmark<div class="integrity-hint" id="hint-evidence">Add evidence and set a target benchmark</div></div></div>
+    <div class="integrity-item"><div class="integrity-dot dot-empty" id="dot-timeline"></div><div class="integrity-label"><strong>Timeline</strong>At least two milestones set<div class="integrity-hint" id="hint-timeline">Add 2+ milestones with months</div></div></div>
+    <div class="integrity-item"><div class="integrity-dot dot-empty" id="dot-milestones"></div><div class="integrity-label"><strong>Year Coverage</strong>Milestones span your timeline<div class="integrity-hint" id="hint-milestones">Add 2+ milestones first</div></div></div>
+    <div class="integrity-item"><div class="integrity-dot dot-empty" id="dot-roles"></div><div class="integrity-label"><strong>Roles & Responsibilities</strong>Two or more people assigned<div class="integrity-hint" id="hint-roles">Assign specific people + responsibilities</div></div></div>
+  </div>
+</div>
+
+  </div>
+</div>
+
+<!-- Confirm Clear Modal -->
+<div class="modal-overlay" id="confirmClearModal">
+  <div class="modal" style="max-width:380px;text-align:center;">
+    <h2 style="margin-bottom:10px;">Clear this goal?</h2>
+    <p style="margin-bottom:22px;">This will reset all fields for the current goal tab. Other goals will not be affected.</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn-secondary" onclick="document.getElementById('confirmClearModal').classList.remove('open')">Cancel</button>
+      <button class="btn-primary" style="background:#c0392b;border-color:#c0392b;" onclick="confirmClear()">Yes, clear everything</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generating overlay -->
+<div class="generating-overlay" id="genOverlay">
+  <div class="spinner"></div>
+  <div class="gen-text">Generating your PDF…</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ----------------------------------------------------------
+// MULTI-GOAL MANAGEMENT
+// ----------------------------------------------------------
+const MAX_GOALS = 5;
+let goals = []; // array of goal data objects
+let activeGoalIdx = 0;
+
+function getBlankGoal() {
+  return {
+    teamName:'', teamLead:'', schoolYear:'2026-27',
+    selectedGoal:'', specificOutcome:'', selectedGoalNum: null,
+    teamGoal:'', selectedComps:[], evidenceItems:[],
+    workstream:null, milestones:[], goalCompletionMonth:'', roles:[]
+  };
+}
+
+function initGoals() {
+  const saved = localStorage.getItem('htsd_goals_v2');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        goals = parsed;
+        activeGoalIdx = parseInt(localStorage.getItem('htsd_active_goal')||'0') || 0;
+        if (activeGoalIdx >= goals.length) activeGoalIdx = 0;
+        renderGoalTabs();
+        restoreFormData(goals[activeGoalIdx]);
+        return;
+      }
+    } catch(e) {}
+  }
+  // Fresh start: one blank goal
+  goals = [getBlankGoal()];
+  activeGoalIdx = 0;
+  renderGoalTabs();
+  restoreFormData(goals[0]);
+}
+
+function saveCurrentGoal() {
+  goals[activeGoalIdx] = getFormData();
+  persistGoals();
+}
+
+function persistGoals() {
+  localStorage.setItem('htsd_goals_v2', JSON.stringify(goals));
+  localStorage.setItem('htsd_active_goal', String(activeGoalIdx));
+}
+
+// Sync Team Identity fields from the active goal to all other goals that
+// still have that field blank - so later goals auto-populate without
+// overwriting anything a team has deliberately changed.
+function syncIdentityToOtherGoals() {
+  const teamName  = document.getElementById('teamName').value;
+  const teamLead  = document.getElementById('teamLead').value;
+  const schoolYear = document.getElementById('schoolYear').value;
+  goals.forEach((g, i) => {
+    if (i === activeGoalIdx) return;
+    if (!g.teamName  && teamName)   g.teamName  = teamName;
+    if (!g.teamLead  && teamLead)   g.teamLead  = teamLead;
+    if (!g.schoolYear && schoolYear) g.schoolYear = schoolYear;
+  });
+  persistGoals();
+}
+
+function renderGoalTabs() {
+  const container = document.getElementById('goalNavTabs');
+  container.innerHTML = goals.map((g, i) => {
+    const isActive = i === activeGoalIdx;
+    const canClose = goals.length > 1;
+    // Short label from goal statement or selected goal
+    const shortTitle = g.teamGoal
+      ? g.teamGoal.substring(0, 28) + (g.teamGoal.length > 28 ? '-' : '')
+      : g.selectedGoal
+        ? g.selectedGoal.replace(/^Goal \d+:\s*/i,'').substring(0,24)+'-'
+        : '';
+    const tabLabel = shortTitle || `Goal ${i+1}`;
+    return `<button class="goal-tab${isActive?' active':''}" onclick="switchGoal(${i})">
+      <span class="goal-tab-num">${i+1}</span>
+      <span class="goal-tab-label" title="${tabLabel}">${tabLabel}</span>
+      ${canClose ? `<span class="goal-tab-close" onclick="event.stopPropagation();removeGoal(${i})" title="Remove">-</span>` : ''}
+    </button>`;
+  }).join('');
+
+  const addBtn = document.getElementById('goalNavAddBtn');
+  addBtn.disabled = goals.length >= MAX_GOALS;
+  addBtn.title = goals.length >= MAX_GOALS ? `Maximum ${MAX_GOALS} goals reached` : 'Add another goal';
+
+  // Update the active goal banner
+  const g = goals[activeGoalIdx];
+  const badge = document.getElementById('goalActiveBadge');
+  const title = document.getElementById('goalActiveTitle');
+  if (badge) badge.textContent = `Goal ${activeGoalIdx + 1} of ${goals.length}`;
+  if (title) {
+    const desc = g?.teamGoal
+      ? g.teamGoal.substring(0, 80) + (g.teamGoal.length > 80 ? '-' : '')
+      : g?.selectedGoal
+        ? g.selectedGoal
+        : 'Fill in the sections below to build this goal';
+    title.textContent = desc;
+  }
+}
+
+function switchGoal(idx) {
+  if (idx === activeGoalIdx) return;
+  saveCurrentGoal();
+  activeGoalIdx = idx;
+  renderGoalTabs();
+  restoreFormData(goals[activeGoalIdx]);
+}
+
+function addGoal() {
+  if (goals.length >= MAX_GOALS) { showToast(`Maximum ${MAX_GOALS} goals per team`, 'info'); return; }
+  saveCurrentGoal();
+  // Carry identity fields from goal 0
+  const identity = {
+    teamName:  goals[0].teamName  || goals[activeGoalIdx].teamName,
+    teamLead:  goals[0].teamLead  || goals[activeGoalIdx].teamLead,
+    schoolYear: goals[0].schoolYear || goals[activeGoalIdx].schoolYear,
+  };
+  const blank = getBlankGoal();
+  blank.teamName   = identity.teamName;
+  blank.teamLead   = identity.teamLead;
+  blank.schoolYear = identity.schoolYear;
+  goals.push(blank);
+  activeGoalIdx = goals.length - 1;
+  renderGoalTabs();
+  restoreFormData(goals[activeGoalIdx]);
+  // Scroll to top of page
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  window.scrollTo({top:0, behavior:'smooth'});
+  showToast(`Goal ${activeGoalIdx+1} added - fill in the details below`, 'success');
+}
+
+function removeGoal(idx) {
+  if (goals.length <= 1) return;
+  if (!confirm(`Remove Goal ${idx+1}? This can't be undone.`)) return;
+  goals.splice(idx, 1);
+  if (activeGoalIdx >= goals.length) activeGoalIdx = goals.length - 1;
+  renderGoalTabs();
+  restoreFormData(goals[activeGoalIdx]);
+  persistGoals();
+  showToast('Goal removed', 'info');
+}
+
+function updateMemberDropdowns() {
+  const raw = document.getElementById('teamLead').value;
+  const names = raw.split(',').map(n=>n.trim()).filter(Boolean);
+  const dl = document.getElementById('memberDatalist');
+  if (dl) dl.innerHTML = names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}"></option>`).join('');
+}
+
+const OUTCOMES = {
+  1: [
+    "Expand Portrait of a Talbot competency integration in instruction and assessment. Create common rubrics aligned to progressions.",
+    "Actively communicate and share the Portrait of a Talbot learning progressions with the broader community.",
+    "Expand portfolios in selected grades to track and showcase student development.",
+    "Expand teacher membership in School-Based Design Teams and create an HTSD Innovation Cohort."
+  ],
+  2: [
+    "Expand proficiency-based assessment and reporting to additional grades.",
+    "Scale the Showcase of Learning to a medium pilot in multiple areas/levels.",
+    "Conduct two student exhibitions."
+  ],
+  3: [
+    "Expand student-led conferences to include more classrooms K-5.",
+    "Use input from student advisory councils to refine and improve programs and course offerings.",
+    "Expand the Passion Project pilot to more grades."
+  ],
+  4: [
+    "Launch internship program for high school students.",
+    "Regularly update and broaden the business partnerships database.",
+    "Engage regional school district partners to expand the secondary transition program.",
+    "Leverage the bonus block to provide opportunities for students to explore authentic, real-world interests for credit(s).",
+    "Expand interdisciplinary learning opportunities to high school students.",
+    "Pilot summer teacher externship with a regional business partner."
+  ],
+  5: [
+    "Revise the year one induction program so all sessions explicitly align with the Portrait of a Talbot competencies.",
+    "Revise and adjust Into Math implementation based on feedback.",
+    "Align K-12 science curriculum and assessments to PA STEELS Standards.",
+    "Refine the scope and sequence of the current high school courses.",
+    "Continue to expand the Responsive Classroom training district-wide.",
+    "Expand Project-Based Learning opportunities in professional development.",
+    "Implement building-based Learning Walks focused on Portrait of Talbot competencies.",
+    "Implement consistent instructional models guiding student use of AI."
+  ]
+};
+
+const GOAL_LABELS = {
+  1: "Goal 1: Integration of Portrait of a Talbot Competencies",
+  2: "Goal 2: Recognizing Many Forms of Success",
+  3: "Goal 3: Student Voice and Choice in Learning",
+  4: "Goal 4: Career Pathway Exploration",
+  5: "Goal 5: Future-Focused Professional Learning"
+};
+
+const months = ['Sum','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
+const MONTH_ORDER = {Sum:0,Aug:1,Sep:2,Oct:3,Nov:4,Dec:5,Jan:6,Feb:7,Mar:8,Apr:9,May:10,Jun:11};
+
+function sortMilestones() {
+  milestones.sort((a,b) => (MONTH_ORDER[a.month]??99) - (MONTH_ORDER[b.month]??99));
+}
+let selectedGoalNum = null;
+let selectedGoalLabel = '';
+let selectedComps = new Set();
+let evidenceItems = []; // [{text, tier}]
+let milestones = [];
+let workstream = null; // 'new' | 'building' | 'established'
+
+// -- Tiers of Data framework --------------------------------------------------
+const TIER_META = {
+  1: { label:'Participation & Reach', color:'ev-t1' },
+  2: { label:'Perception & Learning', color:'ev-t2' },
+  3: { label:'Practice & Implementation', color:'ev-t3' },
+  4: { label:'Impact on Learners', color:'ev-t4' }
+};
+
+// Workstream - which tiers to recommend and which to open by default
+const WORKSTREAM_CONFIG = {
+  new:         { primary:[1,2], secondary:[3,4], open:[1], rec:{1:'Start here',2:'Start here',3:null,4:null} },
+  building:    { primary:[2,3], secondary:[1,4], open:[2,3], rec:{1:null,2:'Prioritize this',3:'Prioritize this',4:null} },
+  established: { primary:[3,4], secondary:[1,2], open:[3,4], rec:{1:null,2:null,3:'Prioritize this',4:'Set impact goals'} }
+};
+
+// Base suggestions per tier per goal
+const TIER_SUGGESTIONS = {
+  1: {
+    default: ['Number of students participating','Number of staff engaged','Session attendance logs','Sign-in sheets or rosters','Meeting frequency log','Number of classrooms reached'],
+    1: ['Number of classrooms where PoT lessons were delivered','Number of teachers who integrated a competency','Student participation counts by grade level','Number of portfolio entries collected'],
+    2: ['Number of students who completed a Showcase','Number of classrooms using proficiency-based reporting','Number of students with badge books','Exhibition attendance count'],
+    3: ['Number of student-led conferences held','Number of students presenting passion projects','Advisory council meeting attendance','Student broadcast episodes completed'],
+    4: ['Number of students in internship placements','Number of business partnerships active','Career exploration events held','Student CBVE participation log'],
+    5: ['Number of teachers completing AI PD','Number of Learning Walk participants','Induction session attendance','Number of teachers using Into Math protocols']
+  },
+  2: {
+    default: ['Pre/post surveys','Student reflection exit tickets','Teacher feedback forms','Family perception surveys','Self-assessment rubrics'],
+    1: ['Student competency self-reflection surveys','Teacher confidence surveys about PoT integration','Family surveys about understanding PoT competencies','Pre/post PoT knowledge checks for new staff'],
+    2: ['Student feedback on Showcase experience','Teacher survey: confidence in proficiency-based grading','Student/family surveys after exhibitions','Badge book self-assessment reflections'],
+    3: ['Student voice surveys about conference experience','Passion project reflection forms','Advisory council feedback summaries','Student surveys on ownership of learning'],
+    4: ['Student surveys on career readiness confidence','Internship experience reflection journals','Student interest inventories (pre/post)','Business partner feedback forms'],
+    5: ['Teacher feedback on PD relevance and quality','Staff survey on AI use in instruction','Learning Walk debrief reflections','Induction cohort satisfaction surveys']
+  },
+  3: {
+    default: ['Classroom observation notes','Student work samples','Portfolio artifacts','Learning walk documentation','Lesson artifacts and materials'],
+    1: ['PoT-aligned lesson artifacts','Common rubric samples with student work','Portfolio entries showing competency growth','Learning walk observation notes focused on PoT'],
+    2: ['Student portfolio artifacts from Showcase','Proficiency-based report samples','Exhibition artifacts and student presentations','Badge book samples with evidence of mastery'],
+    3: ['Video recordings of student-led conferences','Passion project artifacts and products','Student broadcast episode recordings','Advisory council meeting notes and action items'],
+    4: ['Student internship work products','Career exploration portfolios','Interdisciplinary project artifacts','Business partnership documentation'],
+    5: ['Lesson plans aligned to PA STEELS','AI-integrated student work samples','Into Math implementation artifacts','Learning walk observation protocols and notes']
+  },
+  4: {
+    default: ['Competency growth over time','Student-demonstrated skill change','Long-term outcome data','Longitudinal portfolio comparison','Quality of student work over time'],
+    1: ['Growth in PoT competency rubric scores over time','Longitudinal portfolio comparisons showing development','Quality of student self-advocacy in conferences','Teacher observation data on student skill application'],
+    2: ['Student mastery rate on proficiency assessments','Quality of exhibition presentations over time','Increase in students meeting learning progression benchmarks','Longitudinal growth in badge book mastery'],
+    3: ['Student agency and ownership demonstrated in conferences','Depth and complexity of passion project outcomes','Quality of student voice in advisory feedback','Long-term patterns in student-initiated learning'],
+    4: ['Post-graduation outcomes for students with internship experience','Quality of student work with community partners','Student career clarity and direction surveys (longitudinal)','Internship supervisor assessments of student readiness'],
+    5: ['Student achievement data connected to curriculum shifts','Long-term AI literacy demonstrated in student work','Teacher retention and growth connected to PD quality','Student performance on PA STEELS assessments']
+  }
+};
+
+function setWorkstream(type) {
+  workstream = type;
+  document.querySelectorAll('.wt-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('wt-'+type).classList.add('active');
+  renderSuggestionChips();
+  maybeShowMilestoneSuggestions();
+  update();
+}
+
+function renderSuggestionChips() {
+  const area = document.getElementById('evSuggestionsArea');
+  const chipsEl = document.getElementById('evSuggestionChips');
+  if (!area || !chipsEl) return;
+  area.style.display = 'block';
+  const goalKey = selectedGoalNum || 'default';
+  const addedTexts = new Set(evidenceItems.map(e => e.text));
+  const cfg = workstream ? WORKSTREAM_CONFIG[workstream] : null;
+  const allTiers = cfg ? [...cfg.primary, ...cfg.secondary] : [1,2,3,4];
+  const chips = [];
+  const seen = new Set();
+  allTiers.forEach(t => {
+    const suggs = TIER_SUGGESTIONS[t][goalKey] || TIER_SUGGESTIONS[t]['default'];
+    suggs.slice(0,3).forEach(s => { if (!seen.has(s)) { seen.add(s); chips.push({text:s, tier:t}); } });
+  });
+  const tierColors = {1:'#F59E0B',2:'#0EA5E9',3:'#22C55E',4:'#A855F7'};
+  chipsEl.innerHTML = chips.map(c => {
+    const used = addedTexts.has(c.text);
+    return `<button class="ev-suggestion-chip${used?' used':''}" onclick="addEvidenceFromSuggestion(${c.tier},'${c.text.replace(/'/g,"&#39;")}',this)"><span class="ev-tier-pip" style="background:${tierColors[c.tier]}"></span>${c.text}</button>`;
+  }).join('');
+  const label = document.getElementById('evSuggestLabel');
+  if (label && workstream) {
+    const wsNames = {new:'new work - start with participation & perception data', building:'existing work - focus on practice & perception data', established:'established work - focus on impact & practice data'};
+    label.textContent = 'Suggested for ' + wsNames[workstream] + ' - click to add';
+  } else if (label) {
+    label.textContent = 'Suggested evidence - click any to add';
+  }
+}
+
+function applyTierConfig() {}
+function toggleTier() {}
+function renderAllTierSuggestions() { renderSuggestionChips(); }
+function renderTierSuggestions() {}
+
+function handleEvidenceChipClick(el) {
+  addEvidenceFromSuggestion(parseInt(el.dataset.tier), el.dataset.text, el);
+}
+
+function addEvidenceFromSuggestion(tier, text, el) {
+  if (evidenceItems.find(e => e.text === text)) return;
+  evidenceItems.push({text, tier, benchmark:''});
+  el.classList.add('used');
+  renderAddedEvidence();
+  update();
+}
+
+function addEvidenceFromTier(tier, text, el) {
+  addEvidenceFromSuggestion(tier, text, el);
+}
+
+function addEvidenceManual() {
+  const inp = document.getElementById('evidenceInput');
+  const val = inp.value.trim();
+  if (!val) return;
+  evidenceItems.push({text: val, tier: 0, benchmark:''});
+  inp.value = '';
+  renderAddedEvidence();
+  renderSuggestionChips();
+  update();
+}
+
+function removeEvidence(i) {
+  evidenceItems.splice(i, 1);
+  renderAddedEvidence();
+  renderSuggestionChips();
+  update();
+}
+
+function renderAddedEvidence() {
+  const list = document.getElementById('addedEvidenceList');
+  if (!evidenceItems.length) { list.innerHTML = ''; return; }
+  const tierColors = {1:'ev-t1',2:'ev-t2',3:'ev-t3',4:'ev-t4',0:'ev-t0'};
+  const tierLabels = {1:'T1 - Participation',2:'T2 - Perception',3:'T3 - Practice',4:'T4 - Impact',0:'Custom'};
+  list.innerHTML = evidenceItems.map((e,i) => {
+    const dotCls = tierColors[e.tier||0];
+    const tLabel = tierLabels[e.tier||0];
+    return `<div class="ev-item">
+      <div class="ev-item-top">
+        <div class="ev-tier-dot ${dotCls}"></div>
+        <span class="ev-text">${e.text}</span>
+        <span class="ev-tier-label">${tLabel}</span>
+        <button class="ev-remove" onclick="removeEvidence(${i})" title="Remove">-</button>
+      </div>
+      <div class="ev-benchmark-row">
+        <label>Target benchmark:</label>
+        <input class="ev-benchmark-input" placeholder="e.g., 80% of students by March, 12 sessions completed-" value="${(e.benchmark||'').replace(/"/g,'&quot;')}" oninput="evidenceItems[${i}].benchmark=this.value;update()" />
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderEvidenceSuggestions() {
+  // Static suggestions keyed by goal number and workstream
+  const goalKey = selectedGoalNum || 'default';
+  const cfg = WORKSTREAM_CONFIG[workstream] || WORKSTREAM_CONFIG['building'];
+  const chipsEl = document.getElementById('evSuggestionChips');
+  if (!chipsEl) return;
+  const addedTexts = new Set(evidenceItems.map(e => e.text));
+  const tierColors = {1:'#F59E0B', 2:'#0EA5E9', 3:'#22C55E', 4:'#A855F7'};
+  // Show primary tiers first, then secondary
+  const orderedTiers = [...cfg.primary, ...cfg.secondary];
+  const chips = [];
+  orderedTiers.forEach(t => {
+    const suggestions = TIER_SUGGESTIONS[t][goalKey] || TIER_SUGGESTIONS[t]['default'];
+    suggestions.forEach(s => { if (!addedTexts.has(s)) chips.push({text:s, tier:t}); });
+  });
+  chipsEl.innerHTML = chips.map(c =>
+    `<button class="ev-suggestion-chip" onclick="addEvidenceFromSuggestion(${c.tier},'${c.text.replace(/'/g,"&#39;")}',this)"><span class="ev-tier-pip" style="background:${tierColors[c.tier]}"></span>${c.text}</button>`
+  ).join('');
+}
+
+function selectGoal(el) {
+  document.querySelectorAll('.goal-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  selectedGoalNum = parseInt(el.dataset.goal);
+  selectedGoalLabel = GOAL_LABELS[selectedGoalNum] || el.textContent;
+  showOutcomes(selectedGoalNum);
+  if (workstream) renderSuggestionChips();
+  update();
+}
+
+function showOutcomes(num) {
+  const dd = document.getElementById('outcomesDropdown');
+  const list = document.getElementById('outcomesList');
+  const outcomes = OUTCOMES[num] || [];
+  dd.style.display = outcomes.length ? 'block' : 'none';
+  list.innerHTML = outcomes.map((o,i) =>
+    `<div class="outcome-option" onclick="selectOutcome(this,'${o.replace(/'/g,"&#39;")}')">${o}</div>`
+  ).join('');
+}
+
+function selectOutcome(el, val) {
+  document.querySelectorAll('.outcome-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('specificOutcome').value = val;
+  update();
+}
+
+function toggleChip(el, type) {
+  el.classList.toggle('active');
+  const val = el.textContent.replace(/^[^\w]+/,'').trim();
+  if (type === 'comp') { el.classList.contains('active') ? selectedComps.add(val) : selectedComps.delete(val); }
+
+  update();
+}
+
+
+function addMilestone() { milestones.push({month:'Sep',text:'',benchmark:''}); sortMilestones(); renderMilestones(); update(); }
+function removeMilestone(i) { milestones.splice(i,1); renderMilestones(); update(); }
+
+function renderMilestones() {
+  const lbl = document.getElementById('milestoneListLabel');
+  if (lbl) lbl.style.display = milestones.length ? 'block' : 'none';
+  document.getElementById('milestoneList').innerHTML = milestones.map((m,i) => `
+    <div class="milestone-item">
+      <select class="milestone-month" onchange="milestones[${i}].month=this.value;sortMilestones();renderMilestones();update()">
+        ${months.map(mo=>`<option${mo===m.month?' selected':''}>${mo}</option>`).join('')}
+      </select>
+      <input type="text" class="milestone-input" placeholder="Describe this milestone (what will happen or be completed)-" value="${m.text.replace(/"/g,'&quot;')}" oninput="milestones[${i}].text=this.value;renderTimeline();update()" />
+      <button class="remove-btn" onclick="removeMilestone(${i})">-</button>
+    </div>`).join('');
+  renderTimeline();
+  buildRoleChips(); // auto-show responsibility suggestions once milestones exist
+}
+
+function renderTimeline() {
+  const map = {};
+  milestones.forEach(m => { if (!map[m.month]) map[m.month]=[]; map[m.month].push(m.text); });
+  const completionMonth = document.getElementById('goalCompletionMonth')?.value || '';
+  const completionIdx = completionMonth ? MONTH_ORDER[completionMonth] : null;
+
+  // Update completion hint text
+  const hint = document.getElementById('completionHint');
+  if (hint) {
+    if (completionMonth) {
+      const season = MONTH_ORDER[completionMonth] <= 1 ? 'summer/fall' : MONTH_ORDER[completionMonth] <= 4 ? 'fall' : MONTH_ORDER[completionMonth] <= 7 ? 'winter' : 'spring';
+      hint.textContent = `Milestones will be checked against ${completionMonth} as the finish line.`;
+    } else {
+      hint.textContent = '';
+    }
+  }
+
+  document.getElementById('timelineVis').innerHTML = months.map((mo, idx) => {
+    const has = map[mo];
+    const lbl = has ? (has[0].substring(0,10)+(has[0].length>10?'-':'')) : '';
+    const isTarget = completionMonth && mo === completionMonth;
+    const isPast = completionIdx !== null && MONTH_ORDER[mo] > completionIdx;
+    const dotClass = isTarget ? 'tl-dot target-dot' : has ? 'tl-dot has-milestone' : 'tl-dot';
+    const monthStyle = isPast ? 'opacity:0.3;' : '';
+    return `<div class="tl-month" style="${monthStyle}">
+      ${idx < months.length-1 ? `<div class="tl-line${isPast?' faded':''}"></div>` : ''}
+      <div class="${dotClass}">${isTarget ? '-' : ''}</div>
+      <div class="tl-label">${mo}</div>
+      <div class="tl-event">${isTarget ? '-' : lbl}</div>
+    </div>`;
+  }).join('');
+}
+
+// -- Milestone Suggestions ----------------------------------------------------
+
+const BASE_MILESTONE_TEMPLATES = {
+  new: [
+    {month:'Aug', text:'Team kickoff - set norms, review goal, and assign roles'},
+    {month:'Sep', text:'Complete initial planning and gather baseline data'},
+    {month:'Nov', text:'Launch first prototype or pilot with a small group'},
+    {month:'Jan', text:'Mid-year check-in - review evidence and adjust approach'},
+    {month:'Mar', text:'Expand pilot and collect second round of evidence'},
+    {month:'May', text:'Final reflection - compile evidence and celebrate progress'},
+  ],
+  building: [
+    {month:'Aug', text:'Review prior year learning and set goals for this year'},
+    {month:'Sep', text:'Share goals with staff and gather baseline feedback'},
+    {month:'Oct', text:'Implement first iteration with targeted improvements'},
+    {month:'Dec', text:'Check-in - compare evidence to last year\'s baseline'},
+    {month:'Feb', text:'Refine approach based on mid-year data'},
+    {month:'Apr', text:'Present progress to building leadership'},
+  ],
+  established: [
+    {month:'Aug', text:'Set stretch impact goals based on prior year outcomes'},
+    {month:'Sep', text:'Launch with full implementation - document with artifacts'},
+    {month:'Nov', text:'First learning walk or observation cycle'},
+    {month:'Jan', text:'Analyze Tier 3 and Tier 4 evidence - identify patterns'},
+    {month:'Mar', text:'Share findings with colleagues - invite peer feedback'},
+    {month:'May', text:'Showcase student outcomes and plan for next year'},
+  ],
+  default: [
+    {month:'Aug', text:'Team kickoff - set norms and review goal'},
+    {month:'Oct', text:'First implementation checkpoint'},
+    {month:'Dec', text:'Mid-year evidence review'},
+    {month:'Feb', text:'Refine approach based on data'},
+    {month:'Apr', text:'Collect final evidence artifacts'},
+    {month:'May', text:'End-of-year reflection and celebration'},
+  ]
+};
+
+// Auto-trigger: show milestone suggestions when BOTH workstream AND completion month are set
+function maybeShowMilestoneSuggestions() {
+  const completionMonth = document.getElementById('goalCompletionMonth')?.value || '';
+  if (!workstream || !completionMonth) return; // need both
+  const area = document.getElementById('milestoneSuggestArea');
+  if (area) area.style.display = 'block';
+  // Pick template: prefer goal-specific if available, else workstream
+  const template = BASE_MILESTONE_TEMPLATES[workstream] || BASE_MILESTONE_TEMPLATES['default'];
+  renderMilestoneChips(template);
+}
+
+function renderMilestoneChips(suggestions) {
+  const container = document.getElementById('milestoneChips');
+  if (!container) return;
+  const completionIdx = MONTH_ORDER[document.getElementById('goalCompletionMonth')?.value] ?? null;
+  const addedTexts = new Set(milestones.map(m => m.text.trim().toLowerCase()));
+  const filtered = completionIdx !== null
+    ? suggestions.filter(s => (MONTH_ORDER[s.month] ?? 0) <= completionIdx)
+    : suggestions;
+  container.dataset.populated = 'true';
+  container.innerHTML = filtered.map(s => {
+    const used = addedTexts.has(s.text.toLowerCase());
+    return `<div class="milestone-chip${used?' used':''}" data-month="${s.month}" data-text="${s.text.replace(/"/g,'&quot;')}" onclick="handleMilestoneChipClick(this)">
+      <span class="milestone-chip-month">${s.month}</span>
+      <span class="milestone-chip-text">${s.text}</span>
+    </div>`;
+  }).join('');
+}
+
+function handleMilestoneChipClick(el) {
+  const month = el.dataset.month;
+  const text = el.dataset.text;
+  if (milestones.find(m => m.text.trim().toLowerCase() === text.toLowerCase())) return;
+  milestones.push({month, text, benchmark:''});
+  sortMilestones();
+  el.classList.add('used');
+  el.style.pointerEvents = 'none';
+  renderMilestones(); // this now calls buildRoleChips internally
+  update();
+}
+
+function deleteRoleRow(btn) {
+  const row = btn.closest('tr');
+  const tbody = document.getElementById('rolesTable');
+  // Always keep at least one row
+  if (tbody.querySelectorAll('tr').length > 1) {
+    row.remove();
+  } else {
+    row.querySelectorAll('input').forEach(el => el.value = '');
+  }
+  update();
+}
+
+function restoreRolesTable(roles) {
+  const tbody = document.getElementById('rolesTable');
+  if (!tbody) return;
+  // Use saved rows if any have content, otherwise show two blank rows
+  const populated = roles.filter(r => r.name || r.responsibility);
+  const rows = populated.length > 0 ? populated : [{name:'',responsibility:'',byWhen:''},{name:'',responsibility:'',byWhen:''}];
+  // Pad with one extra blank row at the end for easy entry
+  if (populated.length > 0) rows.push({name:'',responsibility:'',byWhen:''});
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td><input type="text" value="${(r.name||'').replace(/"/g,'&quot;')}" placeholder="Select or type name-" list="memberDatalist" oninput="update()" /></td>
+    <td><input type="text" value="${(r.responsibility||'').replace(/"/g,'&quot;')}" placeholder="What are they responsible for?" oninput="update()" /></td>
+    <td><input type="text" value="${(r.byWhen||'').replace(/"/g,'&quot;')}" placeholder="By when? (e.g., Oct, Ongoing)" oninput="sortRolesTable();update()" /></td>
+    <td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>
+  </tr>`).join('');
+}
+
+function addRoleRow() {
+  const tbody = document.getElementById('rolesTable');
+  const row = document.createElement('tr');
+  row.innerHTML = `<td><input type="text" placeholder="Select or type name-" list="memberDatalist" oninput="update()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="update()" /></td><td><input type="text" placeholder="By when? (e.g., Oct, Ongoing)" oninput="sortRolesTable();update()" /></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>`;
+  tbody.appendChild(row);
+  update();
+}
+
+function sortRolesTable() {
+  const tbody = document.getElementById('rolesTable');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+
+  const rowData = rows.map(row => {
+    const inputs = row.querySelectorAll('input');
+    return {
+      name: inputs[0]?.value || '',
+      resp: inputs[1]?.value || '',
+      when: inputs[2]?.value || '',
+    };
+  });
+
+  rowData.sort((a, b) => {
+    const ai = MONTH_ORDER[a.when] ?? 99;
+    const bi = MONTH_ORDER[b.when] ?? 99;
+    if (!a.name && !a.resp) return 1;
+    if (!b.name && !b.resp) return -1;
+    return ai - bi;
+  });
+
+  tbody.innerHTML = rowData.map(r =>
+    `<tr>
+      <td><input type="text" value="${r.name.replace(/"/g,'&quot;')}" placeholder="Select or type name-" list="memberDatalist" oninput="update()" /></td>
+      <td><input type="text" value="${r.resp.replace(/"/g,'&quot;')}" placeholder="What are they responsible for?" oninput="update()" /></td>
+      <td><input type="text" value="${r.when.replace(/"/g,'&quot;')}" placeholder="By when? (e.g., Oct, Ongoing)" oninput="sortRolesTable();update()" /></td>
+      <td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>
+    </tr>`
+  ).join('');
+}
+
+
+function suggestNextSteps() { buildRoleChips(); } // kept for compat
+
+function buildRoleChips() {
+  const area = document.getElementById('rolesSuggestArea');
+  const container = document.getElementById('rolesChips');
+  if (!area || !container) return;
+
+  const hasMilestones = milestones.some(m => m.text.trim().length > 0);
+  if (!hasMilestones) { area.style.display = 'none'; return; }
+  // Auto-show once milestones are present
+  area.style.display = 'block';
+
+  // Get responsibilities already placed
+  const existingResp = new Set(
+    Array.from(document.querySelectorAll('#rolesTable input[type=text]'))
+      .filter((_,i) => i%3===1).map(el => el.value.trim().toLowerCase())
+  );
+
+  // Option C: derive one "owner of" row per milestone
+  const milestoneRows = milestones
+    .filter(m => m.text.trim())
+    .map(m => ({resp: `Lead implementation of: ${m.text.trim()}`, when: m.month, type: 'Milestone'}));
+
+  // Standing structural roles always useful
+  const structural = [
+    {resp: 'Facilitate design team meetings and track progress', when: 'Aug', type: 'Ongoing'},
+    {resp: 'Collect and organize evidence throughout the year', when: 'Aug', type: 'Ongoing'},
+    {resp: 'Communicate goal progress to building principal', when: 'Jan', type: 'Ongoing'},
+    {resp: 'Coordinate with staff to gather feedback and data', when: 'Oct', type: 'Ongoing'},
+    {resp: 'Document and share learning with the broader school community', when: 'May', type: 'Ongoing'},
+  ];
+
+  const all = [...milestoneRows, ...structural];
+  const seen = new Set();
+  const unique = all.filter(s => {
+    const k = s.resp.toLowerCase();
+    if (seen.has(k) || existingResp.has(k)) return false;
+    seen.add(k); return true;
+  });
+
+  container.innerHTML = unique.map(s =>
+    `<div class="role-chip" data-resp="${s.resp.replace(/"/g,'&quot;')}" data-when="${s.when}" onclick="handleRoleChipClick(this)">
+      <span class="role-chip-type">${s.type}</span>
+      <span class="role-chip-resp">${s.resp}</span>
+      <span class="role-chip-when">${s.when}</span>
+    </div>`
+  ).join('');
+}
+
+function handleRoleChipClick(el) {
+  const resp = el.dataset.resp;
+  const when = el.dataset.when;
+  const tbody = document.getElementById('rolesTable');
+  const rows = tbody.querySelectorAll('tr');
+  let placed = false;
+  for (const row of rows) {
+    const inputs = row.querySelectorAll('input');
+    if (inputs[1] && !inputs[1].value.trim()) {
+      inputs[1].value = resp;
+      inputs[2].value = when;
+      placed = true; break;
+    }
+  }
+  if (!placed) {
+    const row = document.createElement('tr');
+    row.innerHTML = `<td><input type="text" list="memberDatalist" oninput="update()" /></td><td><input type="text" value="${resp.replace(/"/g,'&quot;')}" oninput="update()" /></td><td><input type="text" value="${when}" oninput="sortRolesTable();update()" /></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>`;
+    tbody.appendChild(row);
+  }
+  el.classList.add('used');
+  el.style.pointerEvents = 'none';
+  sortRolesTable();
+  update();
+}
+
+function setDot(id, state) {
+  document.getElementById('dot-'+id).className = 'integrity-dot dot-'+state;
+  const h = document.getElementById('hint-'+id);
+  if (h) h.style.display = state==='empty' ? 'block' : 'none';
+}
+
+function update() {
+
+  const goal = document.getElementById('teamGoal').value.trim();
+  const outcome = document.getElementById('specificOutcome').value.trim();
+  const roleInputs = Array.from(document.querySelectorAll('#rolesTable input[type=text]'));
+  const roleRows = [];
+  for (let i=0;i<roleInputs.length;i+=3) { if (roleInputs[i]?.value.trim() && roleInputs[i+1]?.value.trim()) roleRows.push(true); }
+
+  const mMonths = milestones.map(m=>m.month);
+  const fall = new Set(['Sum','Aug','Sep','Oct','Nov']); const winter = new Set(['Dec','Jan','Feb']); const spring = new Set(['Mar','Apr','May','Jun']);
+  const seasons = (mMonths.some(m=>fall.has(m))?1:0)+(mMonths.some(m=>winter.has(m))?1:0)+(mMonths.some(m=>spring.has(m))?1:0);
+
+  let score = 0;
+  const gw = goal.split(/\s+/).filter(Boolean).length;
+  if (gw>=15){setDot('goal','complete');score++;}else if(gw>0)setDot('goal','partial');else setDot('goal','empty');
+  if(selectedGoalLabel&&outcome.length>10){setDot('op','complete');score++;}else if(selectedGoalLabel||outcome.length>0)setDot('op','partial');else setDot('op','empty');
+  if(selectedComps.size>=1){setDot('comp','complete');score++;}else setDot('comp','empty');
+  // Evidence: require at least 1 item and 1 benchmark set
+  const tiersCovered = new Set(evidenceItems.filter(e=>e.tier>0).map(e=>e.tier));
+  const benchmarksSet = evidenceItems.filter(e=>e.benchmark && e.benchmark.trim().length > 0).length;
+  const hasWorkstream = !!workstream;
+  if(evidenceItems.length>=1 && benchmarksSet>=1){setDot('evidence','complete');score++;}
+  else if(evidenceItems.length>=1){setDot('evidence','partial');}
+  else setDot('evidence','empty');
+  const evHint = document.getElementById('hint-evidence');
+  if(evHint){
+    if(!hasWorkstream) evHint.textContent = 'Select a work stream type first';
+    else if(evidenceItems.length<1) evHint.textContent = 'Add at least 1 evidence type';
+    else if(benchmarksSet<1) evHint.textContent = 'Set a target benchmark for at least one item';
+    else evHint.textContent = '';
+  }
+  if(milestones.length>=2){setDot('timeline','complete');score++;}else if(milestones.length===1)setDot('timeline','partial');else setDot('timeline','empty');
+
+  // Year Coverage: check that milestones span from early to near the completion month
+  const completionMonth = document.getElementById('goalCompletionMonth')?.value || '';
+  const completionIdx = completionMonth ? (MONTH_ORDER[completionMonth] ?? null) : null;
+  const mhint = document.getElementById('hint-milestones');
+
+  if (milestones.length >= 2) {
+    const mIdxs = milestones.map(m => MONTH_ORDER[m.month] ?? 0);
+    const earliest = Math.min(...mIdxs);
+    const latest = Math.max(...mIdxs);
+
+    if (completionIdx !== null) {
+      // Goal has a target date: milestones just need to span a reasonable arc up to it
+      const span = latest - earliest;
+      const coversEnd = latest >= completionIdx - 1; // within 1 month of target
+      if (span >= 2 && coversEnd) {
+        setDot('milestones','complete'); score++;
+        if (mhint) mhint.style.display = 'none';
+      } else if (span >= 1) {
+        setDot('milestones','partial');
+        if (mhint) { mhint.style.display='block'; mhint.textContent = coversEnd ? 'Add an earlier milestone to show your starting point' : `Add a milestone closer to ${completionMonth} to show your finish`; }
+      } else {
+        setDot('milestones','partial');
+        if (mhint) { mhint.style.display='block'; mhint.textContent = `Spread milestones across your timeline to ${completionMonth}`; }
+      }
+    } else {
+      // No target date set: use the original full-year spread logic
+      if(seasons>=2){setDot('milestones','complete');score++; if(mhint) mhint.style.display='none';}
+      else{setDot('milestones','partial'); if(mhint){mhint.style.display='block';mhint.textContent='Spread milestones across more of the year, or set a completion month above';}}
+    }
+  } else {
+    setDot('milestones','empty');
+    if (mhint) { mhint.style.display = 'block'; mhint.textContent = 'Add 2+ milestones first'; }
+  }
+  if(roleRows.length>=2){setDot('roles','complete');score++;}else if(roleRows.length===1)setDot('roles','partial');else setDot('roles','empty');
+
+  const pct = Math.round(score/7*100);
+  const fill = document.getElementById('scoreFill');
+  fill.style.width = pct+'%';
+  fill.className = 'score-fill'+(pct>=90?' complete':pct>=55?' good':pct>=20?' partial':'');
+  document.getElementById('scoreValue').textContent = score+' / 7 complete';
+
+  // Autosave to multi-goal storage
+  if (goals && goals.length > 0) {
+    goals[activeGoalIdx] = getFormData();
+    persistGoals();
+    // Refresh tab status dot and banner
+    renderGoalTabs();
+  }
+}
+
+function getFormData() {
+  const roleInputs = Array.from(document.querySelectorAll('#rolesTable input[type=text]'));
+  const roles = [];
+  for (let i=0;i<roleInputs.length;i+=3) {
+    roles.push({name:roleInputs[i]?.value.trim()||'',responsibility:roleInputs[i+1]?.value.trim()||'',byWhen:roleInputs[i+2]?.value.trim()||''});
+  }
+  return {
+    teamName: document.getElementById('teamName').value,
+    teamLead: document.getElementById('teamLead').value,
+    schoolYear: document.getElementById('schoolYear').value,
+    selectedGoal: selectedGoalLabel || (selectedGoalNum ? GOAL_LABELS[selectedGoalNum] : ''),
+    specificOutcome: document.getElementById('specificOutcome').value,
+    teamGoal: document.getElementById('teamGoal').value,
+    selectedComps: [...selectedComps],
+    evidenceItems,
+    workstream,
+    milestones,
+    goalCompletionMonth: document.getElementById('goalCompletionMonth')?.value || '',
+    roles,
+    selectedGoalNum
+  };
+}
+
+function restoreFormData(data) {
+  if (!data) return;
+
+  // Always reset all non-identity fields first so switching goals starts clean
+  document.getElementById('specificOutcome').value = '';
+  document.getElementById('teamGoal').value = '';
+  const gcm = document.getElementById('goalCompletionMonth'); if (gcm) gcm.value = '';
+  document.querySelectorAll('.goal-pill').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.competency-chip').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.wt-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('outcomesDropdown').style.display = 'none';
+  const sa = document.getElementById('evSuggestionsArea'); if (sa) sa.style.display = 'none';
+  const msa = document.getElementById('milestoneSuggestArea'); if (msa) msa.style.display = 'none';
+  const rsa = document.getElementById('rolesSuggestArea'); if (rsa) rsa.style.display = 'none';
+  const chips = document.getElementById('evSuggestionChips'); if (chips) chips.innerHTML = '';
+  const mc = document.getElementById('milestoneChips'); if (mc) { mc.innerHTML = ''; delete mc.dataset.populated; }
+  const rc = document.getElementById('rolesChips'); if (rc) rc.innerHTML = '';
+  selectedGoalNum = null; selectedGoalLabel = ''; selectedComps = new Set();
+  evidenceItems = []; milestones = []; workstream = null;
+  // Roles table will be populated from data.roles below - just clear it for now
+  const tbody = document.getElementById('rolesTable');
+  if (tbody) tbody.innerHTML = '';
+
+  if (data.teamName) document.getElementById('teamName').value = data.teamName;
+  if (data.teamLead) document.getElementById('teamLead').value = data.teamLead;
+  if (data.schoolYear) document.getElementById('schoolYear').value = data.schoolYear;
+  if (data.specificOutcome) document.getElementById('specificOutcome').value = data.specificOutcome;
+  if (data.teamGoal) document.getElementById('teamGoal').value = data.teamGoal;
+
+  selectedComps = new Set(data.selectedComps || []);
+  // Handle both old (string[]) and new ({text,tier}[]) evidence shapes
+  evidenceItems = (data.evidenceItems || []).map(e => typeof e === 'string' ? {text:e, tier:0} : e);
+  milestones = data.milestones || [];
+
+  document.querySelectorAll('.competency-chip').forEach(el => {
+    const v = el.textContent.replace(/^[^\w]+/,'').trim();
+    el.classList.toggle('active', selectedComps.has(v));
+  });
+
+  if (data.selectedGoalNum) {
+    selectedGoalNum = data.selectedGoalNum;
+    selectedGoalLabel = data.selectedGoal || '';
+    document.querySelectorAll('.goal-pill').forEach(el => {
+      el.classList.toggle('active', parseInt(el.dataset.goal) === selectedGoalNum);
+    });
+    showOutcomes(selectedGoalNum);
+    if (data.specificOutcome) {
+      document.querySelectorAll('.outcome-option').forEach(el => {
+        if (el.textContent.trim() === data.specificOutcome.trim()) el.classList.add('selected');
+      });
+    }
+  }
+
+  if (data.goalCompletionMonth) {
+    const sel = document.getElementById('goalCompletionMonth');
+    if (sel) sel.value = data.goalCompletionMonth;
+  }
+
+  if (data.workstream) { setWorkstream(data.workstream); } else { renderSuggestionChips(); }
+
+  // Restore roles table from saved data
+  restoreRolesTable(data.roles || []);
+
+  renderAddedEvidence();
+  renderMilestones();
+  updateMemberDropdowns();
+  update();
+}
+
+
+function exportPDF() {
+  const data = getFormData();
+  document.getElementById('genOverlay').classList.add('open');
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+
+    const W = 215.9, H = 279.4;
+    const mL = 16, mR = 16, mT = 18;
+    const cW = W - mL - mR;
+    let y = 0;
+
+    // Colors
+    const BLUE=[27,79,168], GOLD=[245,197,24], LBLUE=[232,239,249];
+    const SURF=[240,237,230], TEXT=[26,25,22], MUTED=[107,104,96];
+    const WHITE=[255,255,255], SUCCESS=[45,125,70], SUCBG=[234,245,238];
+    const BORDER=[209,207,200], DARKBLUE=[18,52,112];
+
+    const wsLabels={new:'Brand new this year',building:'Building on prior work',established:'Well-established (2+ years)'};
+    const tierNames={1:'Tier 1 - Participation & Reach',2:'Tier 2 - Perception & Learning',3:'Tier 3 - Practice & Implementation',4:'Tier 4 - Impact on Learners',0:'Custom'};
+    const tierColors={1:[146,64,14],2:[12,74,110],3:[20,83,45],4:[76,29,149],0:[80,80,80]};
+    const tierBg={1:[254,243,199],2:[224,242,254],3:[240,253,244],4:[245,243,255],0:SURF};
+
+    // -- Helpers --------------------------------------------------------------
+    function newPage() { doc.addPage(); y = mT; addFooter(doc.getNumberOfPages()); }
+    function check(need) { if (y + need > H - 22) newPage(); }
+
+    function rect(x,iy,w,h,rgb,r=0) {
+      doc.setFillColor(...rgb);
+      r > 0 ? doc.roundedRect(x,iy,w,h,r,r,'F') : doc.rect(x,iy,w,h,'F');
+    }
+
+    function line(x1,iy,x2) {
+      doc.setDrawColor(...BORDER); doc.setLineWidth(0.25);
+      doc.line(x1,iy,x2,iy);
+    }
+
+    function txt(str, x, iy, opts={}) {
+      const {font='normal',size=9,color=TEXT,align='left',maxW=null} = opts;
+      doc.setFont('helvetica', font);
+      doc.setFontSize(size);
+      doc.setTextColor(...color);
+      if (maxW) {
+        const lines = doc.splitTextToSize(String(str), maxW);
+        doc.text(lines, x, iy, {align});
+        return lines.length;
+      }
+      doc.text(String(str), x, iy, {align});
+      return 1;
+    }
+
+    function sectionHeader(label) {
+      check(14);
+      y += 3;
+      rect(mL, y, cW, 7.5, LBLUE);
+      rect(mL, y, 3, 7.5, BLUE);
+      txt(label.toUpperCase(), mL + 6, y + 5.2, {font:'bold', size:7.5, color:BLUE});
+      y += 11;
+    }
+
+    function fieldLabel(label) {
+      txt(label.toUpperCase(), mL, y, {font:'bold', size:7, color:MUTED});
+      y += 4.5;
+    }
+
+    function bodyPara(str, indent=0, size=9.5) {
+      if (!str || str === '-') {
+        txt('Not yet completed', mL+indent, y, {size:9, color:MUTED});
+        y += 5.5; return;
+      }
+      const lines = doc.splitTextToSize(str, cW - indent);
+      doc.setFont('helvetica','normal'); doc.setFontSize(size); doc.setTextColor(...TEXT);
+      lines.forEach(l => { check(6); doc.text(l, mL+indent, y); y += 5.5; });
+    }
+
+    function divider() { check(6); y += 2; line(mL, y, mL+cW); y += 4; }
+
+    function addFooter(pageNum) {
+      rect(0, H-14, W, 14, BLUE);
+      txt('Copyright Learner-Centered Collaborative, 2026. All rights reserved.', mL, H-8.2, {size:6.8, color:[210,222,240]});
+      txt('Hampton Township School District  -  A Tradition of Excellence', mL, H-4.2, {size:6.8, color:[180,200,235]});
+      txt('Page ' + pageNum, W-mR, H-6, {size:7.5, color:[180,200,235], align:'right'});
+    }
+
+    // -- HEADER ---------------------------------------------------------------
+    // Gold left stripe
+    rect(0, 0, 5, H, GOLD);
+    // Navy header band
+    rect(5, 0, W-5, 44, BLUE);
+
+    // Logo (right side of header)
+    try {
+      doc.addImage('data:image/png;base64,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', 'PNG', W-46, 3, 38, 38);
+    } catch(e) { /* skip logo if fails */ }
+
+    // Title block
+    txt('Design Team Goal Plan', mL+2, 16, {font:'bold', size:16, color:WHITE});
+    txt('Hampton Township School District', mL+2, 24, {size:9, color:[200,215,240]});
+    txt('SY ' + (data.schoolYear || '2026-27'), mL+2, 30, {size:9, color:[200,215,240]});
+
+    // Meta bar below header
+    rect(5, 44, W-5, 18, SURF);
+    // Vertical divider between Team and Lead columns
+    doc.setDrawColor(...BORDER); doc.setLineWidth(0.3);
+    doc.line(W/2, 47, W/2, 59);
+
+    // Team column
+    txt('TEAM', mL+2, 50, {font:'bold', size:7, color:MUTED});
+    const teamName = data.teamName || '-';
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...TEXT);
+    doc.text(doc.splitTextToSize(teamName, W/2 - mL - 6), mL+2, 55.5);
+
+    // Lead column
+    txt('TEAM LEAD(S)', W/2+4, 50, {font:'bold', size:7, color:MUTED});
+    const leadName = data.teamLead || '-';
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...TEXT);
+    doc.text(doc.splitTextToSize(leadName, W/2 - mR - 8), W/2+4, 55.5);
+
+    y = 68;
+
+    // -- 1. Operational Plan --------------------------------------------------
+    sectionHeader('Operational Plan Connection');
+    fieldLabel('HTSD Goal');
+    bodyPara(data.selectedGoal);
+    y += 2;
+    fieldLabel('Specific Outcome');
+    bodyPara(data.specificOutcome);
+    divider();
+
+    // -- 2. Design Team Goal --------------------------------------------------
+    sectionHeader('Design Team Goal');
+    check(20);
+    rect(mL, y, cW, 1.5, GOLD);
+    y += 5;
+    if (data.teamGoal) {
+      doc.setFont('helvetica','bolditalic'); doc.setFontSize(10.5); doc.setTextColor(...TEXT);
+      const glines = doc.splitTextToSize(data.teamGoal, cW - 4);
+      glines.forEach(l => { check(7); doc.text(l, mL+2, y); y += 6.5; });
+    } else { bodyPara('-'); }
+    y += 2;
+    divider();
+
+    // -- 3. PoT Competencies --------------------------------------------------
+    sectionHeader('Portrait of a Talbot Competencies');
+    const comps = data.selectedComps || [];
+    if (comps.length) {
+      check(12);
+      const compColors = {
+        'Collaboration':[[232,239,249],[27,79,168]],
+        'Communication':[[232,239,249],[27,79,168]],
+        'Critical Thinking':[[254,243,199],[146,64,14]],
+        'Empathy':[[253,232,232],[160,40,40]],
+        "Learner's Mindset":[[240,253,244],[20,83,45]],
+        'Perseverance':[[245,243,255],[76,29,149]],
+      };
+      let cx = mL;
+      comps.forEach(c => {
+        const clean = c.replace(/^[^\w]+/,'').trim();
+        const [bg,fg] = compColors[clean] || [LBLUE,BLUE];
+        doc.setFontSize(8.5);
+        const tw = doc.getTextWidth(clean);
+        const pw = tw + 8, ph = 6;
+        if (cx + pw > mL + cW) { cx = mL; y += 9; check(10); }
+        rect(cx, y-4, pw, ph, bg, 2);
+        txt(clean, cx+4, y+0.5, {font:'bold', size:8.5, color:fg});
+        cx += pw + 4;
+      });
+      y += 8;
+    } else { bodyPara('-'); }
+    divider();
+
+    // -- 4. Evidence of Impact ------------------------------------------------
+    sectionHeader('Evidence of Impact');
+    if (data.workstream) {
+      txt('Work stream: ' + wsLabels[data.workstream], mL, y, {size:8.5, color:MUTED, font:'italic'});
+      y += 6;
+    }
+    const byTier = {};
+    (data.evidenceItems||[]).forEach(e => {
+      const k = e.tier||0; if (!byTier[k]) byTier[k] = []; byTier[k].push(e);
+    });
+    if (Object.keys(byTier).length) {
+      [1,2,3,4,0].forEach(k => {
+        if (!byTier[k]) return;
+        check(16);
+        const tBg = tierBg[k], tFg = tierColors[k];
+        rect(mL, y, cW, 6.5, tBg, 2);
+        rect(mL, y, 3, 6.5, tFg);
+        txt(tierNames[k]||'Custom', mL+6, y+4.5, {font:'bold', size:8, color:tFg});
+        y += 9;
+        byTier[k].forEach(e => {
+          check(12);
+          const txt2 = e.text || e;
+          const bm = e.benchmark || '';
+          doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...TEXT);
+          const elines = doc.splitTextToSize('- ' + txt2, cW - 8);
+          elines.forEach(l => { check(6); doc.text(l, mL+5, y); y += 5.2; });
+          if (bm) {
+            check(8);
+            rect(mL+5, y, cW-8, 7, SUCBG, 1.5);
+            txt('Target: ', mL+8, y+4.8, {font:'bold', size:8, color:SUCCESS});
+            const tw = doc.getTextWidth('Target: ');
+            txt(bm, mL+8+tw, y+4.8, {size:8, color:SUCCESS});
+            y += 9;
+          }
+          y += 1.5;
+        });
+        y += 3;
+      });
+    } else { bodyPara('-'); }
+    divider();
+
+    // -- 5. Timeline & Milestones ---------------------------------------------
+    sectionHeader('Timeline & Key Milestones');
+    if (data.goalCompletionMonth) {
+      txt('Anticipated completion: ' + data.goalCompletionMonth, mL, y, {size:8.5, color:MUTED, font:'italic'});
+      y += 7;
+    }
+    const mils = (data.milestones||[]).filter(m => m.text && m.text.trim());
+    if (mils.length) {
+      mils.forEach((m, i) => {
+        const mtext = m.text || '';
+        const mlines = doc.splitTextToSize(mtext, cW - 20);
+        const rowH = Math.max(9, mlines.length * 5.5 + 5);
+        check(rowH + 2);
+        rect(mL, y, cW, rowH, i%2===0 ? WHITE : SURF);
+        // Month badge
+        rect(mL, y, 16, rowH, BLUE);
+        txt(m.month, mL+8, y+rowH/2+2, {font:'bold', size:7.5, color:WHITE, align:'center'});
+        // Milestone text
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...TEXT);
+        doc.text(mlines, mL+20, y+5);
+        y += rowH;
+      });
+    } else { bodyPara('-'); }
+    y += 4;
+    divider();
+
+    // -- 6. Roles & Responsibilities ------------------------------------------
+    sectionHeader('Roles & Responsibilities');
+    const roles = (data.roles||[]).filter(r => r.name || r.responsibility);
+    if (roles.length) {
+      check(10);
+      // Table header
+      const col1=mL, col2=mL+58, col3=mL+140, headerH=8;
+      rect(mL, y, cW, headerH, BLUE);
+      txt('NAME / ROLE', col1+3, y+5.5, {font:'bold', size:7.5, color:WHITE});
+      txt('RESPONSIBILITY', col2+2, y+5.5, {font:'bold', size:7.5, color:WHITE});
+      txt('BY WHEN', col3+2, y+5.5, {font:'bold', size:7.5, color:WHITE});
+      y += headerH;
+
+      roles.forEach((r, i) => {
+        const rlines = doc.splitTextToSize(r.responsibility||'-', 76);
+        const nlines = doc.splitTextToSize(r.name||'-', 52);
+        const rowH = Math.max(10, Math.max(rlines.length, nlines.length) * 5 + 5);
+        check(rowH + 2);
+        rect(mL, y, cW, rowH, i%2===0 ? WHITE : SURF);
+        // Subtle column dividers
+        doc.setDrawColor(...BORDER); doc.setLineWidth(0.15);
+        doc.line(col2, y, col2, y+rowH);
+        doc.line(col3, y, col3, y+rowH);
+        doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...TEXT);
+        doc.text(nlines, col1+3, y+5);
+        doc.text(rlines, col2+2, y+5);
+        txt(r.byWhen||'-', col3+2, y+5, {size:8.5, color:BLUE, font:'bold'});
+        y += rowH;
+      });
+      // Table border
+      doc.setDrawColor(...BORDER); doc.setLineWidth(0.3);
+      doc.rect(mL, y-roles.reduce((a,r)=>{
+        const rl=doc.splitTextToSize(r.responsibility||'',76).length;
+        const nl=doc.splitTextToSize(r.name||'',52).length;
+        return a+Math.max(10,Math.max(rl,nl)*5+5);
+      },0)-headerH, cW, roles.reduce((a,r)=>{
+        const rl=doc.splitTextToSize(r.responsibility||'',76).length;
+        const nl=doc.splitTextToSize(r.name||'',52).length;
+        return a+Math.max(10,Math.max(rl,nl)*5+5);
+      },0)+headerH);
+    } else { bodyPara('-'); }
+    y += 4;
+
+    // -- Footer on all pages --------------------------------------------------
+    const total = doc.getNumberOfPages();
+    for (let p = 1; p <= total; p++) {
+      doc.setPage(p);
+      addFooter(p);
+    }
+
+    // -- Save -----------------------------------------------------------------
+    const slug = (data.teamName||'Team').replace(/[^a-z0-9]/gi,'_').substring(0,30);
+    const yr = (data.schoolYear||'2627').replace(/[^0-9]/g,'');
+    doc.save();
+    showToast('- PDF exported!', 'success');
+  } catch(err) {
+    showToast('Export failed - please try again', 'info');
+    console.error('PDF export error:', err);
+  } finally {
+    document.getElementById('genOverlay').classList.remove('open');
+  }
+}
+
+function buildExportText(data) { return ''; } // kept for compatibility
+
+// ----------------------------------------------------------
+// EXPORT ALL GOALS PDF
+// ----------------------------------------------------------
+function exportAllGoalsPDF() {
+  // Save current form state first
+  saveCurrentGoal();
+  const allGoals = goals.filter(g => g.teamGoal || g.specificOutcome || g.selectedGoalNum);
+  if (!allGoals.length) { showToast('Add at least one goal before exporting', 'info'); return; }
+
+  document.getElementById('genOverlay').classList.add('open');
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'letter' });
+    const W=215.9,H=279.4,mL=16,mR=16,mT=18,cW=W-mL-mR;
+    let y=0;
+    const BLUE=[27,79,168],GOLD=[245,197,24],LBLUE=[232,239,249];
+    const SURF=[240,237,230],TEXT=[26,25,22],MUTED=[107,104,96];
+    const WHITE=[255,255,255],BORDER=[209,207,200],DARKBLUE=[18,52,112];
+    const months=['Sum','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
+    const MONTH_ORDER_PDF={Sum:0,Aug:1,Sep:2,Oct:3,Nov:4,Dec:5,Jan:6,Feb:7,Mar:8,Apr:9,May:10,Jun:11};
+
+    function rect(x,iy,w,h,rgb,r=0){doc.setFillColor(...rgb);r>0?doc.roundedRect(x,iy,w,h,r,r,'F'):doc.rect(x,iy,w,h,'F');}
+    function txt(str,x,iy,opts={}){const{font='normal',size=9,color=TEXT,align='left',maxW=null}=opts;doc.setFont('helvetica',font);doc.setFontSize(size);doc.setTextColor(...color);if(maxW){const lines=doc.splitTextToSize(String(str),maxW);doc.text(lines,x,iy,{align});return lines.length;}doc.text(String(str),x,iy,{align});return 1;}
+    function addFooter(pageNum){rect(0,H-14,W,14,BLUE);txt('Copyright Learner-Centered Collaborative, 2026. All rights reserved.',mL,H-8.2,{size:6.8,color:[210,222,240]});txt('Hampton Township School District  -  A Tradition of Excellence',mL,H-4.2,{size:6.8,color:[180,200,235]});txt('Page '+pageNum,W-mR,H-6,{size:7.5,color:[180,200,235],align:'right'});}
+    function newPage(){doc.addPage();y=mT;addFooter(doc.getNumberOfPages());}
+    function check(need){if(y+need>H-22)newPage();}
+    function line(x1,iy,x2){doc.setDrawColor(...BORDER);doc.setLineWidth(0.25);doc.line(x1,iy,x2,iy);}
+    function divider(){check(6);y+=2;line(mL,y,mL+cW);y+=4;}
+    function bodyPara(str,indent=0,size=9.5){if(!str||str==='-'){txt('-',mL+indent,y,{size:9,color:MUTED});y+=5.5;return;}const lines=doc.splitTextToSize(str,cW-indent);doc.setFont('helvetica','normal');doc.setFontSize(size);doc.setTextColor(...TEXT);lines.forEach(l=>{check(6);doc.text(l,mL+indent,y);y+=5.5;});}
+    function sectionHeader(label){check(14);y+=3;rect(mL,y,cW,7.5,LBLUE);rect(mL,y,3,7.5,BLUE);txt(label.toUpperCase(),mL+6,y+5.2,{font:'bold',size:7.5,color:BLUE});y+=11;}
+    function fieldLabel(label){txt(label.toUpperCase(),mL,y,{font:'bold',size:7,color:MUTED});y+=4.5;}
+
+    function getGoalLabel(g, idx){ return g.selectedGoal || (g.selectedGoalNum ? `Goal ${g.selectedGoalNum}` : `Goal ${idx+1}`); }
+    function getGoalShortLabel(g, idx){ return `Goal ${idx+1}`; }
+    function getGoalLeads(g){
+      const names = [];
+      (g.roles||[]).forEach(r=>{
+        const resp = (r.responsibility||'').toLowerCase();
+        const isLead = resp.includes('lead implementation') || resp.includes('facilitate') || resp.includes('communicate goal progress');
+        if(r.name && isLead && !names.includes(r.name)) names.push(r.name);
+      });
+      if(!names.length){ (g.roles||[]).forEach(r=>{ if(r.name && !names.includes(r.name)) names.push(r.name); }); }
+      return names;
+    }
+    function getPrimaryMetric(g){
+      const e = (g.evidenceItems||[]).find(item=>item && item.text);
+      return { metric: e ? e.text : 'Not yet defined', target: e && e.benchmark ? e.benchmark : 'Not yet defined' };
+    }
+    function addWritingLines(x, startY, width, count, gap=8){
+      doc.setDrawColor(220,220,220); doc.setLineWidth(0.2);
+      for(let i=0;i<count;i++){ doc.line(x, startY + i*gap, x+width, startY + i*gap); }
+    }
+    function addPageTitle(title, subtitle){
+      rect(0,0,5,H,GOLD);
+      rect(5,0,W-5,34,BLUE);
+      txt(title,mL+8,16,{font:'bold',size:14,color:WHITE});
+      if(subtitle) txt(subtitle,mL+8,25,{size:8.5,color:[200,220,255]});
+      y=44;
+    }
+
+    const goalColors = [
+      [27,79,168],[20,120,60],[140,50,150],[180,80,20],[14,100,120]
+    ];
+
+    // -- PAGE 1: ENHANCED EXECUTIVE SUMMARY -----------------------------------
+    rect(0,0,5,H,GOLD);
+    rect(5,0,W-5,48,BLUE);
+    txt('Design Team Goals Summary',mL+8,16,{font:'bold',size:16,color:WHITE});
+    const teamName = allGoals[0]?.teamName || '';
+    const schoolYear = allGoals[0]?.schoolYear || '2026-27';
+    txt((teamName||'Hampton Township School District')+' - SY '+schoolYear,mL+8,26,{size:9.5,color:[180,200,235]});
+    txt(allGoals.length+' Goal'+(allGoals.length>1?'s':'')+' - Generated '+new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}),mL+8,34,{size:8.5,color:[180,200,235]});
+    txt('Implementation Record: save and share this PDF with all design team members.',mL+8,42,{font:'bold',size:8.2,color:[255,244,190]});
+    y=58;
+
+    allGoals.forEach((g,i) => {
+      check(46);
+      const gc = goalColors[i % goalColors.length];
+      const gcLight = gc.map(v=>Math.min(255,Math.round(v*0.1+230)));
+      const metricInfo = getPrimaryMetric(g);
+      const leads = getGoalLeads(g).join(', ') || 'Not assigned';
+      const milestoneCount = (g.milestones||[]).filter(m=>m && m.text).length;
+
+      rect(mL,y,cW,42,gcLight,3);
+      rect(mL,y,4,42,gc,3);
+      rect(mL+8,y+6,14,14,gc,7);
+      txt(String(i+1),mL+15,y+14.5,{font:'bold',size:11,color:WHITE,align:'center'});
+
+      const goalLabel = getGoalLabel(g,i);
+      txt('Goal '+(i+1),mL+26,y+8,{font:'bold',size:9,color:gc});
+      txt(goalLabel,mL+26,y+14,{size:8,color:MUTED,maxW:cW-58});
+      const statement = g.teamGoal || g.specificOutcome || 'Goal statement not yet written.';
+      const snlines = doc.splitTextToSize(statement, cW-38);
+      doc.setFont('helvetica','normal');doc.setFontSize(8.2);doc.setTextColor(...TEXT);
+      doc.text(snlines.slice(0,2),mL+26,y+21);
+
+      const metaY = y+34;
+      txt('Lead: '+leads,mL+26,metaY,{size:7.5,color:TEXT,maxW:54});
+      txt('Metric: '+metricInfo.metric,mL+82,metaY,{size:7.5,color:TEXT,maxW:58});
+      txt(String(milestoneCount)+' milestone'+(milestoneCount===1?'':'s'),mL+144,metaY,{size:7.5,color:TEXT});
+
+      if (g.goalCompletionMonth) {
+        rect(mL+cW-24,y+6,22,8,gc,3);
+        txt('Target: '+g.goalCompletionMonth,mL+cW-13,y+11,{size:7,color:WHITE,align:'center'});
+      }
+      y += 48;
+    });
+
+    // -- PAGE 2: SUCCESS METRICS DASHBOARD ------------------------------------
+    newPage();
+    addPageTitle('Success Metrics Dashboard','How the team will monitor progress and impact across goals');
+    txt('Revisit these indicators throughout the year to monitor progress, notice patterns, and make adjustments as needed.',mL,y,{size:8.5,color:MUTED,maxW:cW});
+    y += 14;
+    rect(mL,y,cW,8,LBLUE);
+    txt('GOAL',mL+3,y+5.5,{font:'bold',size:7,color:BLUE});
+    txt('METRIC',mL+34,y+5.5,{font:'bold',size:7,color:BLUE});
+    txt('TARGET',mL+124,y+5.5,{font:'bold',size:7,color:BLUE});
+    y += 10;
+    allGoals.forEach((g,i)=>{
+      const metricInfo = getPrimaryMetric(g);
+      const metricLines = doc.splitTextToSize(metricInfo.metric,84);
+      const targetLines = doc.splitTextToSize(metricInfo.target,52);
+      const rowH = Math.max(20, Math.max(metricLines.length,targetLines.length)*5 + 10);
+      check(rowH+4);
+      const gc = goalColors[i % goalColors.length];
+      rect(mL,y,cW,rowH,[250,249,246],2);
+      rect(mL+3,y+5,22,8,gc,3);
+      txt('Goal '+(i+1),mL+14,y+10.2,{font:'bold',size:7,color:WHITE,align:'center'});
+      doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...TEXT);
+      doc.text(metricLines,mL+34,y+8);
+      doc.text(targetLines,mL+124,y+8);
+      y += rowH + 5;
+    });
+    check(36);
+    txt('Notes / Updates',mL,y,{font:'bold',size:8,color:BLUE});
+    y += 8;
+    addWritingLines(mL,y,cW,4,9);
+    y += 38;
+
+    // -- PAGE 3: DRAFT IMPLEMENTATION TIMELINE --------------------------------
+    newPage();
+    addPageTitle('Draft Implementation Timeline Across All Goals','A starting point for seeing milestone timing across the school year');
+    rect(mL,y,cW,20,[255,248,220],2);
+    txt('Calendar Alignment Check',mL+4,y+5.5,{font:'bold',size:8,color:[120,80,0]});
+    const timelinePromptLines = doc.splitTextToSize('Review this draft timeline alongside your school year calendar. Consider breaks, testing windows, conferences, grading deadlines, and other high-demand periods before finalizing milestone timing.', cW-8);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7.8); doc.setTextColor(120,80,0);
+    doc.text(timelinePromptLines,mL+4,y+10.5);
+    y += 28;
+
+    const timelineMonths = months.slice(1); // Aug-Jun
+    const labelW = 18;
+    const cellW = (cW-labelW)/timelineMonths.length;
+    const headerH = 10;
+    rect(mL,y,labelW,headerH,LBLUE);
+    timelineMonths.forEach((mo,mi)=>{ rect(mL+labelW+mi*cellW,y,cellW,headerH,LBLUE); txt(mo,mL+labelW+mi*cellW+cellW/2,y+6.5,{font:'bold',size:6.7,color:BLUE,align:'center'}); });
+    y += headerH;
+    allGoals.forEach((g,gi)=>{
+      const gc = goalColors[gi % goalColors.length];
+      const rowH = 34;
+      check(rowH+4);
+      rect(mL,y,labelW,rowH,gc,2);
+      txt('G'+(gi+1),mL+labelW/2,y+18,{font:'bold',size:8,color:WHITE,align:'center'});
+      timelineMonths.forEach((mo,mi)=>{
+        const x = mL+labelW+mi*cellW;
+        rect(x,y,cellW,rowH,[250,249,246]);
+        doc.setDrawColor(...BORDER); doc.rect(x,y,cellW,rowH);
+        const items = (g.milestones||[]).filter(m=>m.month===mo && m.text).map(m=>m.text);
+        const isTarget = g.goalCompletionMonth===mo;
+        let cellText = items.slice(0,2).map(t=>'• '+t).join('\n');
+        if(isTarget) cellText += (cellText?'\n':'')+'★ Target';
+        if(cellText){
+          const lines = doc.splitTextToSize(cellText, cellW-2);
+          doc.setFont('helvetica','normal'); doc.setFontSize(5.7); doc.setTextColor(...TEXT);
+          doc.text(lines.slice(0,5),x+1.2,y+5);
+        }
+      });
+      y += rowH;
+    });
+    y += 8;
+    txt('Meeting Notes / Timeline Adjustments',mL,y,{font:'bold',size:8,color:BLUE});
+    y += 8;
+    addWritingLines(mL,y,cW,4,9);
+
+    // -- PAGE 4: TEAM OWNERSHIP SNAPSHOT -------------------------------------
+    const personMap = {}; // name -> [{goalIdx, responsibility, byWhen}]
+    allGoals.forEach((g,gi) => {
+      (g.roles||[]).forEach(r => {
+        if (!r.name || !r.responsibility) return;
+        if (!personMap[r.name]) personMap[r.name] = [];
+        personMap[r.name].push({goalIdx:gi+1, responsibility:r.responsibility, byWhen:r.byWhen||''});
+      });
+    });
+    const people = Object.keys(personMap);
+    if (people.length > 0) {
+      newPage();
+      addPageTitle('Team Ownership Snapshot','Responsibilities grouped by team member for easy reference');
+      people.forEach(person => {
+        check(45);
+        rect(mL,y,cW,8,LBLUE,2);
+        txt(person,mL+4,y+5.5,{font:'bold',size:9.5,color:BLUE});
+        y += 12;
+        txt('Assigned Responsibilities',mL,y,{font:'bold',size:7.5,color:MUTED});
+        y += 5;
+        personMap[person].forEach(r => {
+          check(10);
+          const fullResp = `${r.responsibility}${r.byWhen ? ' - '+r.byWhen : ''} (Goal ${r.goalIdx})`;
+          const rlines = doc.splitTextToSize('• '+fullResp, cW-6);
+          doc.setFont('helvetica','normal'); doc.setFontSize(8.2); doc.setTextColor(...TEXT);
+          doc.text(rlines,mL+3,y);
+          y += Math.max(7, rlines.length*4.6);
+        });
+        y += 2;
+        txt('Notes / Updates',mL,y,{font:'bold',size:7.5,color:BLUE});
+        y += 7;
+        addWritingLines(mL,y,cW,3,8);
+        y += 28;
+      });
+    }
+
+    // -- PAGE 5: 90-DAY ACTION PLAN ------------------------------------------
+    newPage();
+    addPageTitle('90-Day Action Plan','A meeting-friendly view of the team’s earliest implementation moves');
+    const orderedMonths = months.slice(1);
+    const monthItems = [];
+    orderedMonths.forEach(mo=>{
+      allGoals.forEach((g,gi)=>{
+        (g.milestones||[]).filter(m=>m.month===mo && m.text).forEach(m=>monthItems.push({month:mo,goal:gi+1,text:m.text}));
+      });
+    });
+    const firstMonths = [...new Set(monthItems.map(item=>item.month))].slice(0,3);
+    const windows = ['Next 30 Days','Next 60 Days','Next 90 Days'];
+    windows.forEach((label,idx)=>{
+      check(50);
+      const mo = firstMonths[idx];
+      rect(mL,y,cW,8,LBLUE,2);
+      txt(label+(mo ? ` (${mo})` : ''),mL+4,y+5.5,{font:'bold',size:8.5,color:BLUE});
+      y += 12;
+      const items = mo ? monthItems.filter(item=>item.month===mo) : [];
+      if(items.length){
+        rect(mL,y,cW,8,[250,249,246]);
+        txt('ACTION',mL+4,y+5.5,{font:'bold',size:7,color:MUTED});
+        txt('STATUS',mL+118,y+5.5,{font:'bold',size:7,color:MUTED});
+        txt('NOTES',mL+142,y+5.5,{font:'bold',size:7,color:MUTED});
+        y += 10;
+        items.slice(0,5).forEach(item=>{
+          const action = doc.splitTextToSize(`${item.text} (Goal ${item.goal})`,106);
+          const rowH = Math.max(16, action.length*4.5+8);
+          check(rowH+2);
+          doc.setDrawColor(...BORDER); doc.rect(mL,y,cW,rowH);
+          doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...TEXT);
+          doc.text(action,mL+4,y+6);
+          txt('□',mL+125,y+7,{size:10,color:TEXT});
+          addWritingLines(mL+142,y+7, cW-144, 2, 7);
+          y += rowH;
+        });
+      } else {
+        txt('No milestone identified yet.',mL+4,y,{size:8,color:MUTED});
+        y += 6;
+        addWritingLines(mL+4,y,cW-8,2,8);
+        y += 20;
+      }
+      y += 8;
+    });
+
+    // -- PAGE 6: REVIEW CADENCE ----------------------------------------------
+    newPage();
+    addPageTitle('Design Team Review Cadence','Recommended checkpoints for evidence review, reflection, and adjustment');
+    const checkpoints = [
+      ['September Review','Review baseline data and confirm implementation conditions'],
+      ['November Review','Monitor pilot implementation and adjust supports'],
+      ['January Review','Reflect on mid-year evidence and revise next steps'],
+      ['March Review','Expand, refine, and collect additional evidence'],
+      ['May Review','Measure impact, document learning, and celebrate progress']
+    ];
+    rect(mL,y,cW,8,LBLUE);
+    txt('CHECKPOINT',mL+4,y+5.5,{font:'bold',size:7,color:BLUE});
+    txt('DATE COMPLETED',mL+56,y+5.5,{font:'bold',size:7,color:BLUE});
+    txt('KEY DECISIONS / NEXT STEPS',mL+96,y+5.5,{font:'bold',size:7,color:BLUE});
+    y += 8;
+    checkpoints.forEach(cp=>{
+      const rowH = 28;
+      check(rowH+2);
+      doc.setDrawColor(...BORDER); doc.rect(mL,y,cW,rowH);
+      txt(cp[0],mL+4,y+7,{font:'bold',size:8,color:TEXT});
+      txt(cp[1],mL+4,y+13,{size:7.3,color:MUTED,maxW:48});
+      addWritingLines(mL+58,y+9,30,2,8);
+      addWritingLines(mL+96,y+9,cW-100,3,7);
+      y += rowH;
+    });
+    y += 8;
+    txt('Use these checkpoints to review evidence, celebrate progress, identify needed changes, and keep the plan responsive.',mL,y,{size:8,color:MUTED,maxW:cW});
+
+    // -- PER-GOAL DETAIL PAGES ------------------------------------------------
+    allGoals.forEach((g,gi) => {
+      newPage();
+      // Mini header per goal
+      const gc = goalColors[gi % goalColors.length];
+      rect(0,0,5,H,GOLD);
+      rect(5,0,W-5,36,BLUE);
+      rect(5,0,W-5,36,gc);
+      txt('Goal '+(gi+1)+' of '+allGoals.length,mL+8,12,{size:8.5,color:[200,220,255]});
+      txt(g.teamGoal||'Goal statement not written',mL+8,22,{font:'bold',size:11,color:WHITE,maxW:cW-20});
+      const teamId = [g.teamName,g.schoolYear].filter(Boolean).join(' - ');
+      txt(teamId||'Hampton Township School District',mL+8,31,{size:8,color:[200,220,255]});
+      y=44;
+
+      // Operational plan
+      sectionHeader('Operational Plan Connection');
+      fieldLabel('District Goal');
+      bodyPara(g.selectedGoal||'-');
+      fieldLabel('Specific Outcome');
+      bodyPara(g.specificOutcome||'-');
+
+      divider();
+      sectionHeader('Portrait of a Talbot Competencies');
+      if(g.selectedComps&&g.selectedComps.length){
+        const row1=g.selectedComps.slice(0,3),row2=g.selectedComps.slice(3);
+        const chipW=55,chipH=7,chipGap=4;
+        [row1,row2].forEach((row,ri)=>{
+          if(!row.length)return;
+          check(chipH+4);
+          row.forEach((comp,ci)=>{
+            rect(mL+ci*(chipW+chipGap),y,chipW,chipH,LBLUE,3);
+            txt(comp.replace(/^[^\w]+/,''),mL+ci*(chipW+chipGap)+3,y+5,{size:7.5,color:BLUE,font:'bold'});
+          });
+          y+=chipH+chipGap;
+        });
+        y+=2;
+      } else { bodyPara('-'); }
+
+      divider();
+      sectionHeader('Evidence of Impact');
+      if(g.evidenceItems&&g.evidenceItems.length){
+        const tierColors={1:[146,64,14],2:[12,74,110],3:[20,83,45],4:[76,29,149],0:[80,80,80]};
+        const tierBg={1:[254,243,199],2:[224,242,254],3:[240,253,244],4:[245,243,255],0:[240,237,230]};
+        const tierNames={1:'T1',2:'T2',3:'T3',4:'T4',0:'-'};
+        g.evidenceItems.forEach(e=>{
+          check(14);
+          const tc=tierColors[e.tier||0],tb=tierBg[e.tier||0];
+          rect(mL,y,cW,12,tb,2);
+          rect(mL,y,16,12,tc.map?tc:[...tc],2);
+          txt(tierNames[e.tier||0],mL+8,y+7.5,{size:7,color:WHITE,font:'bold',align:'center'});
+          const el=doc.splitTextToSize(e.text,cW-22);
+          doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...TEXT);
+          doc.text(el[0]||'',mL+20,y+5);
+          if(e.benchmark&&e.benchmark.trim()){
+            txt('Target: '+e.benchmark.substring(0,60),mL+20,y+9.5,{size:7,color:MUTED});
+          }
+          y+=14;
+        });
+      } else { bodyPara('-'); }
+
+      divider();
+      sectionHeader('Timeline & Key Milestones');
+      fieldLabel('Target Completion: '+(g.goalCompletionMonth||'Not set'));
+      if(g.milestones&&g.milestones.length){
+        g.milestones.forEach(m=>{
+          check(9);
+          rect(mL,y,cW,7.5,LBLUE,2);
+          rect(mL,y,20,7.5,[...gc],2);
+          txt(m.month,mL+10,y+5.2,{font:'bold',size:7.5,color:WHITE,align:'center'});
+          const ml=doc.splitTextToSize(m.text||'-',cW-26);
+          doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...TEXT);
+          doc.text(ml[0]||'-',mL+23,y+5.2);
+          y+=9;
+        });
+      } else { bodyPara('-'); }
+
+      divider();
+      sectionHeader('Roles & Responsibilities');
+      if(g.roles&&g.roles.filter(r=>r.name||r.responsibility).length){
+        const headerH=8;
+        check(headerH+6);
+        rect(mL,y,cW,headerH,LBLUE);
+        const col1=mL,col2=mL+58,col3=mL+cW-24;
+        txt('TEAM MEMBER',col1+3,y+5.5,{font:'bold',size:7,color:BLUE});
+        txt('RESPONSIBILITY',col2+2,y+5.5,{font:'bold',size:7,color:BLUE});
+        txt('BY WHEN',col3+2,y+5.5,{font:'bold',size:7,color:BLUE});
+        y+=headerH;
+        g.roles.filter(r=>r.name||r.responsibility).forEach(r=>{
+          const rl=doc.splitTextToSize(r.responsibility||'',76).length;
+          const nl=doc.splitTextToSize(r.name||'',52).length;
+          const rowH=Math.max(10,Math.max(rl,nl)*5+5);
+          check(rowH+2);
+          if(y%2===0)rect(mL,y,cW,rowH,[248,247,244]);
+          doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(...TEXT);
+          const nlines=doc.splitTextToSize(r.name||'-',52);
+          const rlines=doc.splitTextToSize(r.responsibility||'-',76);
+          doc.text(nlines,col1+3,y+5);
+          doc.text(rlines,col2+2,y+5);
+          txt(r.byWhen||'-',col3+2,y+5,{size:8.5,color:BLUE,font:'bold'});
+          y+=rowH;
+        });
+      } else { bodyPara('-'); }
+
+      // Working notes space for this specific goal
+      check(40);
+      divider();
+      sectionHeader('Design Team Notes');
+      addWritingLines(mL,y,cW,4,9);
+      y += 38;
+
+      y += 4;
+    });
+
+    // -- FINAL WORKING NOTES PAGES -------------------------------------------
+    for (let notePage=1; notePage<=4; notePage++) {
+      newPage();
+      addPageTitle('Design Team Notes','Use this space to capture decisions, changes, questions, and next steps');
+      const tableY = y;
+      rect(mL,y,cW,8,LBLUE);
+      txt('DATE',mL+3,y+5.5,{font:'bold',size:7,color:BLUE});
+      txt('KEY DISCUSSION POINTS',mL+32,y+5.5,{font:'bold',size:7,color:BLUE});
+      txt('DECISIONS MADE',mL+104,y+5.5,{font:'bold',size:7,color:BLUE});
+      txt('NEXT STEPS',mL+150,y+5.5,{font:'bold',size:7,color:BLUE});
+      y += 8;
+      for (let r=0; r<6; r++) {
+        const rowH = 30;
+        doc.setDrawColor(...BORDER); doc.rect(mL,y,cW,rowH);
+        doc.line(mL+28,y,mL+28,y+rowH);
+        doc.line(mL+100,y,mL+100,y+rowH);
+        doc.line(mL+146,y,mL+146,y+rowH);
+        y += rowH;
+      }
+    }
+
+    // Footer on all pages
+    const total = doc.getNumberOfPages();
+    for (let p=1;p<=total;p++){doc.setPage(p);addFooter(p);}
+
+    const teamSlug = (allGoals[0]?.teamName||'Team').replace(/[^a-z0-9]/gi,'_').substring(0,20);
+    doc.save(`HTSD_${teamSlug}_All_Goals_SY2627.pdf`);
+    showToast(`- All ${allGoals.length} goal${allGoals.length>1?'s':''} exported!`, 'success');
+  } catch(err) {
+    showToast('Export failed - please try again', 'info');
+    console.error('Export all goals error:', err);
+  } finally {
+    document.getElementById('genOverlay').classList.remove('open');
+  }
+}
+
+function clearAll() {
+  document.getElementById('confirmClearModal').classList.add('open');
+}
+
+function confirmClear() {
+  document.getElementById('confirmClearModal').classList.remove('open');
+  document.querySelectorAll('input[type=text],textarea').forEach(el=>el.value='');
+  document.querySelectorAll('select').forEach(el=>el.selectedIndex=0);
+  document.querySelectorAll('.goal-pill,.competency-chip,.wt-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('outcomesDropdown').style.display='none';
+  const sa=document.getElementById('evSuggestionsArea'); if(sa) sa.style.display='none';
+  const ms=document.getElementById('milestoneSuggestArea'); if(ms) ms.style.display='none';
+  const rs=document.getElementById('rolesSuggestArea'); if(rs) rs.style.display='none';
+  const chips=document.getElementById('evSuggestionChips'); if(chips) chips.innerHTML='';
+  selectedGoalNum=null; selectedGoalLabel=''; selectedComps.clear();
+  evidenceItems=[]; milestones=[]; workstream=null;
+  goals[activeGoalIdx] = getBlankGoal();
+  persistGoals();
+  renderGoalTabs();
+  renderAddedEvidence(); renderMilestones(); renderTimeline(); update();
+  showToast('Goal cleared', 'info');
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// Restore autosave on load
+window.addEventListener('load', () => {
+  renderTimeline();
+  initGoals();
+});
+</script>
+
+  <div class="page-footer">
+    <div class="page-footer-left">
+      <div class="page-footer-text">
+        This Design Team Goal Builder was created by <strong>Learner-Centered Collaborative</strong><br>
+        <a href="https://learnercentered.org" target="_blank">learnercentered.org</a>
+      </div>
+    </div>
+    <div class="page-footer-right">
+      Built in partnership with<br>Hampton Township School District
+    </div>
+  </div>
+</body>
+</html>
