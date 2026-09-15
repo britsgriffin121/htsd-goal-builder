@@ -644,6 +644,8 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
       <div class="section-header"><div class="section-number">TIMELINE</div><div class="section-title">Timeline & Key Milestones</div></div>
       <p class="section-desc">Answer these three questions about your goal — pick a month and describe what will happen. Each answer becomes one of your milestones. Add more below if you need them.</p>
 
+      <div id="checkinActiveWindow" style="display:none;font-size:12.5px;font-weight:700;color:var(--hampton-blue);background:var(--hampton-blue-light);border-radius:8px;padding:6px 12px;margin-bottom:14px;"></div>
+
       <div id="checkinGuidingQuestions"></div>
 
       <div id="checkinMilestoneList"></div>
@@ -1963,12 +1965,11 @@ function renderCheckinSummary() {
     const hasAnyMilestoneText = (g.milestones || []).some(m => m.text && m.text.trim());
     return `<div class="checkin-goal-row" style="display:block;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;">
-        <span class="checkin-goal-row-text" style="flex:1;">${esc(text)}</span>
+        <span class="checkin-goal-row-text" style="flex:1;cursor:pointer;" title="Click to edit this goal's timeline & owners" onclick="startCheckinGoalWizard(${i})">${esc(text)}</span>
         ${goals.length > 1 ? `<button class="role-del-btn" style="width:auto;font-size:20px;flex-shrink:0;" title="Remove this goal" onclick="removeCheckinGoal(${i})">×</button>` : ''}
       </div>
       <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
         <button class="btn-secondary" style="padding:5px 10px;font-size:12.5px;" onclick="startEditCheckinGoalText(${i})">Edit wording</button>
-        <button class="btn-secondary" style="padding:5px 10px;font-size:12.5px;" onclick="startCheckinGoalWizard(${i})">Timeline & owners →</button>
         ${!hasAnyMilestoneText ? `<span style="font-size:12px;color:var(--text-light);font-style:italic;">No milestones yet</span>` : ''}
       </div>
     </div>`;
@@ -1984,8 +1985,24 @@ function tryAdvanceToProjectPlan() {
   // No saveCurrentGoal() here — same reasoning as openCheckinGoal(). The
   // summary list never touches the full-edit form's shared globals, so
   // there's nothing stale to flush and calling it would clobber real data.
-  // Advancing is no longer gated on completeness — teams decide for
-  // themselves when they're ready to move on.
+  // Advancing is not blocked on completeness — teams decide for themselves
+  // when they're ready to move on — but if goals still have no milestones,
+  // the Project Plan step won't have much to work with, so we surface that
+  // rather than silently letting them arrive at an empty plan.
+  const emptyCount = goals.filter(g => !(g.milestones || []).some(m => m.text && m.text.trim())).length;
+  if (emptyCount > 0) {
+    const goalWord = emptyCount === 1 ? 'goal doesn\'t' : 'goals don\'t';
+    showConfirmModal(
+      'Continue without milestones?',
+      `${emptyCount} of ${goals.length} ${goalWord} have milestones yet. The Project Plan works best once each goal has a timeline. Continue anyway?`,
+      'Continue anyway',
+      () => {
+        document.getElementById('confirmClearModal')?.classList.remove('open');
+        switchPhase('pm');
+      }
+    );
+    return;
+  }
   switchPhase('pm');
 }
 
@@ -2312,20 +2329,40 @@ function updateCheckinGuidingAnswer(i, field, value, skipDotRefresh) {
       if (!hasDot && isUnanswered) dotHost.insertAdjacentHTML('beforeend', '<span class="q-unanswered-dot" title="Not yet answered"></span>');
     }
   }
+  renderCheckinActiveWindow();
+}
+
+// Derived, read-only window spanning the earliest-to-latest month across
+// whatever milestones (guiding + extras) currently have a month set — this
+// replaces a separate start/end date field on Question 1. Ongoing work
+// often has no defined end, so we show what the team has actually committed
+// to rather than asking them to declare a hard end date up front.
+function renderCheckinActiveWindow() {
+  const g = goals[activeGoalIdx];
+  const el = document.getElementById('checkinActiveWindow');
+  if (!el) return;
+  const monthsWithText = (g.milestones || []).filter(m => m.text && m.text.trim()).map(m => m.month);
+  if (!monthsWithText.length) { el.style.display = 'none'; return; }
+  const indices = monthsWithText.map(mo => MONTH_ORDER[mo] ?? 0);
+  const minMo = monthsWithText[indices.indexOf(Math.min(...indices))];
+  const maxMo = monthsWithText[indices.indexOf(Math.max(...indices))];
+  el.textContent = minMo === maxMo ? `Active: ${minMo}` : `Active: ${minMo}–${maxMo}`;
+  el.style.display = 'inline-block';
 }
 
 function renderCheckinMilestones() {
   const g = goals[activeGoalIdx];
   renderCheckinGuidingQuestions();
+  renderCheckinActiveWindow();
   const list = document.getElementById('checkinMilestoneList');
   const extras = (g.milestones || []).slice(CHECKIN_GUIDING_QUESTIONS.length);
   list.innerHTML = extras.map((m, extraI) => {
     const i = extraI + CHECKIN_GUIDING_QUESTIONS.length;
     return `<div class="checkin-milestone-item">
-      <select onchange="saveCheckinGoal()">
+      <select onchange="saveCheckinGoal();renderCheckinActiveWindow()">
         ${months.map(mo => `<option value="${mo}"${mo === m.month ? ' selected' : ''}>${mo}</option>`).join('')}
       </select>
-      <input type="text" placeholder="Describe this milestone…" value="${(m.text||'').replace(/"/g,'&quot;')}" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" />
+      <input type="text" placeholder="Describe this milestone…" value="${(m.text||'').replace(/"/g,'&quot;')}" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly();renderCheckinActiveWindow()" />
       <button class="remove-btn" onclick="removeCheckinMilestone(${i})">−</button>
     </div>`;
   }).join('');
