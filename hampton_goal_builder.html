@@ -372,7 +372,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 <div class="header">
   <div class="header-accent"></div>
   <div class="header-content">
-    <div class="header-left">
+    <div class="header-left" onclick="returnToStart()" style="cursor:pointer;" title="Return to start">
       <div class="header-badge">H</div>
       <div class="header-text">
         <h1>Design Team Goal Builder</h1>
@@ -1758,6 +1758,23 @@ function enterMode(mode) {
 }
 
 function backToModeGate() {
+  document.getElementById('checkinPickerShell').style.display = 'none';
+  document.getElementById('fullLaunchShell').style.display = 'none';
+  document.getElementById('modeGateShell').style.display = '';
+}
+
+// Click the header logo/title from anywhere in the tool to get back to the
+// "Continue planning / Set brand new goals" choice screen. Work already
+// entered is untouched — this only changes which screen is showing, it does
+// not clear localStorage or the in-memory goals array, so nothing is lost
+// and re-picking the same team resumes exactly where they left off.
+function returnToStart() {
+  if (currentPhase !== 'launch') {
+    const ok = confirm('Return to the start screen? Your work is saved — you can pick "Continue planning" and your team again to pick up right where you left off.');
+    if (!ok) return;
+  }
+  document.body.classList.remove('checkin-mode');
+  switchPhase('launch');
   document.getElementById('checkinPickerShell').style.display = 'none';
   document.getElementById('fullLaunchShell').style.display = 'none';
   document.getElementById('modeGateShell').style.display = '';
