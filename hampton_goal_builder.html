@@ -90,6 +90,7 @@ body.checkin-mode .reflection-nudge{display:block}
 .q-month-field{display:flex;flex-direction:column;gap:3px;flex-shrink:0}
 .q-month-label{font-size:10.5px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:0.04em;padding-left:1px}
 .q-answer-row select{border:1.5px solid var(--border-strong);border-radius:8px;padding:9px 10px;font-size:14px;width:90px;background:#fff}
+.q-answer-row .q-frequency-select{flex:1;width:auto}
 .q-unanswered-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--hampton-gold-dark,#C49A10);margin-left:6px;flex-shrink:0;align-self:center}
 /* ── Autosave indicator ── */
 .autosave-indicator{position:fixed;bottom:14px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 13px;font-size:11.5px;color:var(--text-muted);box-shadow:0 2px 10px rgba(26,25,22,0.1);display:flex;align-items:center;gap:6px;z-index:50;opacity:0;transition:opacity 0.3s}
@@ -2265,8 +2266,8 @@ function renderCheckinAddedEvidence(g) {
 // use "+ Add Milestone" and render in the plain list below. ──
 const CHECKIN_GUIDING_QUESTIONS = [
   {
+    type: 'frequency',
     text: "Is this a one-time event or an ongoing practice — and if it's ongoing, when does it start?",
-    placeholder: 'Describe what will happen…',
     monthLabel: 'Starts',
     defaultMonth: 'Nov'
   },
@@ -2284,14 +2285,31 @@ const CHECKIN_GUIDING_QUESTIONS = [
   }
 ];
 
+// Question 1 doesn't need free text — the "action" being described is the
+// goal itself, not something new the team has to redescribe. It's really a
+// classification (one-time vs. ongoing) + a start month. We still store an
+// auto-generated `text` on the milestone underneath, though, since every
+// downstream consumer (PDF export, Google Sheet sync, readiness checks, the
+// Review Goals "No milestones yet" note, the Active window calc) keys off
+// milestone text to decide whether a milestone is "real."
+function frequencyMilestoneText(frequency, month) {
+  if (frequency === 'one-time') return `One-time event happens in ${month}`;
+  return `Ongoing practice begins in ${month}`;
+}
+
 // Ensures the first 3 milestone slots exist (blank if not yet answered) so
 // the guiding questions always have something to bind to; never overwrites
 // text a team has already entered.
 function ensureCheckinGuidingSlots(g) {
   g.milestones = g.milestones || [];
   for (let i = 0; i < CHECKIN_GUIDING_QUESTIONS.length; i++) {
+    const q = CHECKIN_GUIDING_QUESTIONS[i];
     if (!g.milestones[i]) {
-      g.milestones[i] = {month: CHECKIN_GUIDING_QUESTIONS[i].defaultMonth, text: '', benchmark: ''};
+      if (q.type === 'frequency') {
+        g.milestones[i] = {month: q.defaultMonth, text: '', benchmark: '', frequency: ''};
+      } else {
+        g.milestones[i] = {month: q.defaultMonth, text: '', benchmark: ''};
+      }
     }
   }
 }
@@ -2304,19 +2322,56 @@ function renderCheckinGuidingQuestions() {
   wrap.innerHTML = CHECKIN_GUIDING_QUESTIONS.map((q, i) => {
     const m = g.milestones[i];
     const unanswered = !m.text || !m.text.trim();
-    return `<div class="q-block">
-      <div class="q-text"><span class="q-number">${i+1}</span>${esc(q.text)}${unanswered ? '<span class="q-unanswered-dot" title="Not yet answered"></span>' : ''}</div>
-      <div class="q-answer-row">
-        <input type="text" placeholder="${esc(q.placeholder)}" value="${(m.text||'').replace(/"/g,'&quot;')}" oninput="updateCheckinGuidingAnswer(${i}, 'text', this.value, true)" />
-        <div class="q-month-field">
-          <label class="q-month-label">${esc(q.monthLabel || 'Month')}</label>
-          <select onchange="updateCheckinGuidingAnswer(${i}, 'month', this.value)">
-            ${months.map(mo => `<option value="${mo}"${mo === m.month ? ' selected' : ''}>${mo}</option>`).join('')}
+    const dotHtml = unanswered ? '<span class="q-unanswered-dot" title="Not yet answered"></span>' : '';
+    const answerHtml = q.type === 'frequency'
+      ? `<div class="q-answer-row">
+          <select class="q-frequency-select" onchange="updateCheckinFrequencyAnswer(${i}, 'frequency', this.value)">
+            <option value="" ${!m.frequency ? 'selected' : ''} disabled>Choose one…</option>
+            <option value="ongoing" ${m.frequency === 'ongoing' ? 'selected' : ''}>Ongoing practice</option>
+            <option value="one-time" ${m.frequency === 'one-time' ? 'selected' : ''}>One-time event</option>
           </select>
-        </div>
-      </div>
+          <div class="q-month-field">
+            <label class="q-month-label">${esc(q.monthLabel || 'Month')}</label>
+            <select onchange="updateCheckinFrequencyAnswer(${i}, 'month', this.value)">
+              ${months.map(mo => `<option value="${mo}"${mo === m.month ? ' selected' : ''}>${mo}</option>`).join('')}
+            </select>
+          </div>
+        </div>`
+      : `<div class="q-answer-row">
+          <input type="text" placeholder="${esc(q.placeholder)}" value="${(m.text||'').replace(/"/g,'&quot;')}" oninput="updateCheckinGuidingAnswer(${i}, 'text', this.value, true)" />
+          <div class="q-month-field">
+            <label class="q-month-label">${esc(q.monthLabel || 'Month')}</label>
+            <select onchange="updateCheckinGuidingAnswer(${i}, 'month', this.value)">
+              ${months.map(mo => `<option value="${mo}"${mo === m.month ? ' selected' : ''}>${mo}</option>`).join('')}
+            </select>
+          </div>
+        </div>`;
+    return `<div class="q-block">
+      <div class="q-text"><span class="q-number">${i+1}</span>${esc(q.text)}${dotHtml}</div>
+      ${answerHtml}
     </div>`;
   }).join('');
+}
+
+function refreshCheckinUnansweredDot(i, isUnanswered) {
+  const dotHost = document.querySelectorAll('#checkinGuidingQuestions .q-text')[i];
+  if (!dotHost) return;
+  const hasDot = !!dotHost.querySelector('.q-unanswered-dot');
+  if (hasDot && !isUnanswered) dotHost.querySelector('.q-unanswered-dot').remove();
+  if (!hasDot && isUnanswered) dotHost.insertAdjacentHTML('beforeend', '<span class="q-unanswered-dot" title="Not yet answered"></span>');
+}
+
+// Question 1 only: frequency and month both feed the auto-generated text,
+// so either field changing regenerates it (once both are set).
+function updateCheckinFrequencyAnswer(i, field, value) {
+  const g = goals[activeGoalIdx];
+  ensureCheckinGuidingSlots(g);
+  g.milestones[i][field] = value;
+  const m = g.milestones[i];
+  m.text = m.frequency ? frequencyMilestoneText(m.frequency, m.month) : '';
+  persistGoals();
+  refreshCheckinUnansweredDot(i, !m.text);
+  renderCheckinActiveWindow();
 }
 
 function updateCheckinGuidingAnswer(i, field, value, skipDotRefresh) {
@@ -2329,13 +2384,7 @@ function updateCheckinGuidingAnswer(i, field, value, skipDotRefresh) {
   // here — re-painting just this one dot is cheap since it's not the input
   // the user is actively typing into.
   if (field === 'text') {
-    const dotHost = document.querySelectorAll('#checkinGuidingQuestions .q-text')[i];
-    if (dotHost) {
-      const hasDot = !!dotHost.querySelector('.q-unanswered-dot');
-      const isUnanswered = !value || !value.trim();
-      if (hasDot && !isUnanswered) dotHost.querySelector('.q-unanswered-dot').remove();
-      if (!hasDot && isUnanswered) dotHost.insertAdjacentHTML('beforeend', '<span class="q-unanswered-dot" title="Not yet answered"></span>');
-    }
+    refreshCheckinUnansweredDot(i, !value || !value.trim());
   }
   renderCheckinActiveWindow();
 }
