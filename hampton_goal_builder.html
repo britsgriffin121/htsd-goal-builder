@@ -601,8 +601,32 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
     </div>
 
     <div class="section">
+      <div class="section-header"><div class="section-number">EVIDENCE</div><div class="section-title">Evidence of Progress</div></div>
+      <p class="section-desc">How will you know this goal is moving? Click any suggestion to add it, or write your own.</p>
+      <div id="checkinEvSuggestionsArea" style="margin-bottom:12px;">
+        <div id="checkinEvSuggestionChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+      </div>
+      <div class="add-evidence-row" style="display:flex;gap:8px;margin-bottom:10px;">
+        <input type="text" id="checkinEvidenceInput" placeholder="Add your own evidence…" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addCheckinEvidenceManual();}" />
+        <button class="btn-secondary" onclick="addCheckinEvidenceManual()">+ Add</button>
+      </div>
+      <div id="checkinAddedEvidenceList"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
       <div class="section-header"><div class="section-number">TIMELINE</div><div class="section-title">Timeline & Key Milestones</div></div>
       <p class="section-desc">When will you check on this goal, and what should be true by then?</p>
+
+      <div class="roles-suggest-area" style="margin-bottom:12px;">
+        <span class="roles-suggest-label" style="font-size:13px;color:var(--text-muted);font-style:italic;display:block;margin-bottom:8px;">Is this work new, building, or established? We'll suggest milestones to match.</span>
+        <div class="workstream-btns" style="display:flex;gap:8px;">
+          <button class="wt-btn" id="checkin-wt-new" onclick="setCheckinWorkstream('new')">New</button>
+          <button class="wt-btn" id="checkin-wt-building" onclick="setCheckinWorkstream('building')">Building</button>
+          <button class="wt-btn" id="checkin-wt-established" onclick="setCheckinWorkstream('established')">Established</button>
+        </div>
+      </div>
 
       <div class="reflection-nudge" style="display:block;">
         <div class="reflection-nudge-label">💭 From this morning's ecosystem reflection</div>
@@ -1890,6 +1914,8 @@ function openCheckinGoal(idx) {
     g.teamGoal || g.specificOutcome || `Goal ${idx + 1} (not yet named)`;
   renderCheckinMilestones();
   renderCheckinRoles();
+  renderCheckinEvidence();
+  renderCheckinWorkstreamButtons();
 }
 
 function backToCheckinSummary() {
@@ -1909,9 +1935,9 @@ function openFullEditFromCheckin() {
   restoreFormData(goals[activeGoalIdx]);
 }
 
-// Reads the simple editor's own milestone/roles DOM and writes it into the
-// active goal — independent of getFormData()/the full-edit view's fields,
-// since the simple view doesn't share those inputs.
+// Reads the simple editor's own milestone/roles/evidence DOM and writes it
+// into the active goal — independent of getFormData()/the full-edit view's
+// fields, since the simple view doesn't share those inputs.
 function saveCheckinGoal() {
   const g = goals[activeGoalIdx];
   if (!g) return;
@@ -1928,7 +1954,126 @@ function saveCheckinGoal() {
     return { name: inputs[0]?.value || '', responsibility: inputs[1]?.value || '', byWhen: inputs[2]?.value || '' };
   }).filter(r => r.name.trim() || r.responsibility.trim());
 
+  const evEls = document.querySelectorAll('#checkinAddedEvidenceList .ev-item');
+  g.evidenceItems = Array.from(evEls).map(el => ({
+    text: el.dataset.text || '',
+    tier: parseInt(el.dataset.tier) || 0,
+    benchmark: el.querySelector('.ev-benchmark-input')?.value || ''
+  })).filter(e => e.text.trim());
+
   persistGoals();
+}
+
+// ── CHECK-IN: Evidence suggestions (goal-matched, all tiers flattened —
+// no tier/workstream UI, per Brittany's simplified-check-in decision) ──
+function renderCheckinEvidence() {
+  const g = goals[activeGoalIdx];
+  renderCheckinEvSuggestionChips(g);
+  renderCheckinAddedEvidence(g);
+}
+
+function renderCheckinEvSuggestionChips(g) {
+  const chipsEl = document.getElementById('checkinEvSuggestionChips');
+  if (!chipsEl) return;
+  const goalKey = g.selectedGoalNum || 'default';
+  const addedTexts = new Set((g.evidenceItems || []).map(e => e.text));
+  const tierColors = {1:'#F59E0B',2:'#0EA5E9',3:'#22C55E',4:'#A855F7'};
+  const chips = [];
+  const seen = new Set();
+  [1,2,3,4].forEach(t => {
+    const suggs = TIER_SUGGESTIONS[t][goalKey] || TIER_SUGGESTIONS[t]['default'];
+    suggs.slice(0,2).forEach(s => { if (!seen.has(s)) { seen.add(s); chips.push({text:s, tier:t}); } });
+  });
+  chipsEl.innerHTML = chips.map(c => {
+    const used = addedTexts.has(c.text);
+    return `<button class="ev-suggestion-chip${used?' used':''}" onclick="addCheckinEvidenceFromSuggestion(${c.tier},'${esc(c.text).replace(/'/g,"&#39;")}')"><span class="ev-tier-pip" style="background:${tierColors[c.tier]}"></span>${esc(c.text)}</button>`;
+  }).join('');
+}
+
+function addCheckinEvidenceFromSuggestion(tier, text) {
+  const g = goals[activeGoalIdx];
+  if ((g.evidenceItems || []).find(e => e.text === text)) return;
+  g.evidenceItems = g.evidenceItems || [];
+  g.evidenceItems.push({text, tier, benchmark:''});
+  persistGoals();
+  renderCheckinEvidence();
+}
+
+function addCheckinEvidenceManual() {
+  const inp = document.getElementById('checkinEvidenceInput');
+  const val = (inp?.value || '').trim();
+  if (!val) return;
+  const g = goals[activeGoalIdx];
+  g.evidenceItems = g.evidenceItems || [];
+  g.evidenceItems.push({text: val, tier: 0, benchmark:''});
+  inp.value = '';
+  persistGoals();
+  renderCheckinEvidence();
+}
+
+function removeCheckinEvidence(i) {
+  const g = goals[activeGoalIdx];
+  g.evidenceItems.splice(i, 1);
+  persistGoals();
+  renderCheckinEvidence();
+}
+
+function renderCheckinAddedEvidence(g) {
+  const list = document.getElementById('checkinAddedEvidenceList');
+  if (!list) return;
+  const items = g.evidenceItems || [];
+  if (!items.length) { list.innerHTML = ''; return; }
+  const tierColors = {1:'ev-t1',2:'ev-t2',3:'ev-t3',4:'ev-t4',0:'ev-t0'};
+  const tierLabels = {1:'T1 - Participation',2:'T2 - Perception',3:'T3 - Practice',4:'T4 - Impact',0:'Custom'};
+  list.innerHTML = items.map((e,i) => `
+    <div class="ev-item" data-text="${esc(e.text)}" data-tier="${e.tier||0}">
+      <div class="ev-item-top">
+        <div class="ev-tier-dot ${tierColors[e.tier||0]}"></div>
+        <span class="ev-text">${esc(e.text)}</span>
+        <span class="ev-tier-label">${tierLabels[e.tier||0]}</span>
+        <button class="ev-remove" onclick="removeCheckinEvidence(${i})" title="Remove">-</button>
+      </div>
+      <div class="ev-benchmark-row">
+        <label>Target benchmark:</label>
+        <input class="ev-benchmark-input" placeholder="e.g., 80% of students by March" value="${esc(e.benchmark||'')}" oninput="saveCheckinGoal()" />
+      </div>
+    </div>`).join('');
+}
+
+// ── CHECK-IN: Workstream toggle (full 3-way: new/building/established) —
+// drives which milestone-suggestion template applies, per goal ──
+function renderCheckinWorkstreamButtons() {
+  const g = goals[activeGoalIdx];
+  ['new','building','established'].forEach(w => {
+    const btn = document.getElementById('checkin-wt-' + w);
+    if (btn) btn.classList.toggle('active', g.workstream === w);
+  });
+}
+
+function setCheckinWorkstream(w) {
+  const g = goals[activeGoalIdx];
+  g.workstream = w;
+  persistGoals();
+  renderCheckinWorkstreamButtons();
+  maybeShowCheckinMilestoneSuggestions();
+}
+
+// Mirrors maybeShowMilestoneSuggestions() from the full-edit flow, but reads
+// and writes goals[activeGoalIdx] directly instead of the shared globals —
+// only pre-populates when milestones are empty, never overwrites real work.
+function maybeShowCheckinMilestoneSuggestions() {
+  const g = goals[activeGoalIdx];
+  if (!g.workstream) return;
+  if ((g.milestones || []).length > 0) return;
+  const template = BASE_MILESTONE_TEMPLATES[g.workstream] || BASE_MILESTONE_TEMPLATES['default'];
+  const completionIdx = g.goalCompletionMonth ? (MONTH_ORDER[g.goalCompletionMonth] ?? null) : null;
+  const filtered = completionIdx !== null
+    ? template.filter(s => (MONTH_ORDER[s.month] ?? 0) <= completionIdx)
+    : template;
+  g.milestones = filtered.map(s => ({month: s.month, text: s.text, benchmark: ''}));
+  persistGoals();
+  renderCheckinMilestones();
+  showToast('Suggested milestones added. Edit or remove any that do not fit.', 'success');
 }
 
 function renderCheckinMilestones() {
