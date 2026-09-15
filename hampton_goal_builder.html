@@ -879,10 +879,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 
       <table class="roles-table">
         <thead><tr><th style="width:28%">Team Member</th><th style="width:43%">Responsibility</th><th style="width:18%">By When</th><th style="width:11%"></th></tr></thead>
-        <tbody id="rolesTable">
-          <tr><td><input type="text" placeholder="Select or type name…" list="memberDatalist" oninput="update()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="update()" /></td><td><input type="text" placeholder="By when? (e.g., Oct, Ongoing)" oninput="sortRolesTable();update()" /></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">×</button></td></tr>
-          <tr><td><input type="text" list="memberDatalist" oninput="update()" /></td><td><input type="text" oninput="update()" /></td><td><input type="text" oninput="sortRolesTable();update()" /></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">×</button></td></tr>
-        </tbody>
+        <tbody id="rolesTable"></tbody>
       </table>
       <datalist id="memberDatalist"></datalist>
       <button class="add-row-btn" onclick="addRoleRow()">+ Add Responsibility</button>
@@ -1971,7 +1968,16 @@ function renderCheckinSummary() {
 
 function proceedFromCheckinReview() {
   if (!goals.length) { showToast('Add at least one goal before continuing.', 'info'); return; }
-  startCheckinGoalWizard(0);
+  // If every goal already has evidence, there's nothing left to walk through
+  // in the wizard — go straight to the Project Plan step instead of looping
+  // back into goal 1's wizard, which had no way back out to Project Plan.
+  const allDone = goals.every(g => (g.evidenceItems || []).some(e => e.text && e.text.trim()));
+  if (allDone) {
+    tryAdvanceToProjectPlan();
+    return;
+  }
+  const firstUnfinished = goals.findIndex(g => !(g.evidenceItems || []).some(e => e.text && e.text.trim()));
+  startCheckinGoalWizard(firstUnfinished === -1 ? 0 : firstUnfinished);
 }
 
 function tryAdvanceToProjectPlan() {
@@ -2130,7 +2136,8 @@ function saveCheckinRolesStep() {
   const roleRows = document.querySelectorAll('#checkinRolesTable tr');
   g.roles = Array.from(roleRows).map(row => {
     const inputs = row.querySelectorAll('input');
-    return { name: inputs[0]?.value || '', responsibility: inputs[1]?.value || '', byWhen: inputs[2]?.value || '' };
+    const whenSelect = row.querySelector('select.role-when-select');
+    return { name: inputs[0]?.value || '', responsibility: inputs[1]?.value || '', byWhen: whenSelect?.value || '' };
   }).filter(r => r.name.trim() || r.responsibility.trim());
   persistGoals();
 }
@@ -2233,7 +2240,10 @@ function renderCheckinRoles() {
   tbody.innerHTML = roles.map(r => `<tr>
     <td><input type="text" value="${(r.name||'').replace(/"/g,'&quot;')}" placeholder="Name" list="memberDatalist" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td>
     <td><input type="text" value="${(r.responsibility||'').replace(/"/g,'&quot;')}" placeholder="What are they responsible for?" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td>
-    <td><input type="text" value="${(r.byWhen||'').replace(/"/g,'&quot;')}" placeholder="By when?" oninput="saveCheckinGoal()" /></td>
+    <td><select class="role-when-select" onchange="saveCheckinGoal()">
+      <option value="" ${!r.byWhen ? 'selected' : ''}>Choose…</option>
+      ${roleWhenOptionsHtml(r.byWhen)}
+    </select></td>
     <td><button class="role-del-btn" onclick="removeCheckinRoleRow(this)" title="Remove">×</button></td>
   </tr>`).join('');
 }
@@ -2242,7 +2252,7 @@ function addCheckinRoleRow() {
   saveCheckinGoal();
   const tbody = document.getElementById('checkinRolesTable');
   const row = document.createElement('tr');
-  row.innerHTML = `<td><input type="text" placeholder="Name" list="memberDatalist" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td><td><input type="text" placeholder="By when?" oninput="saveCheckinGoal()" /></td><td><button class="role-del-btn" onclick="removeCheckinRoleRow(this)" title="Remove">×</button></td>`;
+  row.innerHTML = `<td><input type="text" placeholder="Name" list="memberDatalist" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td><td><select class="role-when-select" onchange="saveCheckinGoal()"><option value="" selected>Choose…</option>${roleWhenOptionsHtml('')}</select></td><td><button class="role-del-btn" onclick="removeCheckinRoleRow(this)" title="Remove">×</button></td>`;
   tbody.appendChild(row);
 }
 
@@ -2250,7 +2260,11 @@ function removeCheckinRoleRow(btn) {
   const row = btn.closest('tr');
   const tbody = document.getElementById('checkinRolesTable');
   if (tbody.querySelectorAll('tr').length > 1) row.remove();
-  else row.querySelectorAll('input').forEach(el => el.value = '');
+  else {
+    row.querySelectorAll('input').forEach(el => el.value = '');
+    const sel = row.querySelector('select.role-when-select');
+    if (sel) sel.value = '';
+  }
   saveCheckinGoal();
 }
 
@@ -2601,7 +2615,14 @@ const LEARNER_INDICATORS = {
 };
 
 const months = ['Sum','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
-const MONTH_ORDER = {Sum:0,Aug:1,Sep:2,Oct:3,Nov:4,Dec:5,Jan:6,Feb:7,Mar:8,Apr:9,May:10,Jun:11};
+const MONTH_ORDER = {Sum:0,Aug:1,Sep:2,Oct:3,Nov:4,Dec:5,Jan:6,Feb:7,Mar:8,Apr:9,May:10,Jun:11,Ongoing:12};
+
+// Options for the Roles & Responsibilities "By when" dropdown — the district's
+// school-year months, plus "Ongoing" for standing responsibilities with no end date.
+function roleWhenOptionsHtml(selected) {
+  const opts = months.map(mo => `<option value="${mo}"${mo === selected ? ' selected' : ''}>${mo}</option>`).join('');
+  return opts + `<option value="Ongoing"${selected === 'Ongoing' ? ' selected' : ''}>Ongoing</option>`;
+}
 
 function sortMilestones() {
   milestones.sort((a,b) => (MONTH_ORDER[a.month]??99) - (MONTH_ORDER[b.month]??99));
@@ -3143,6 +3164,8 @@ function deleteRoleRow(btn) {
     row.remove();
   } else {
     row.querySelectorAll('input').forEach(el => el.value = '');
+    const sel = row.querySelector('select.role-when-select');
+    if (sel) sel.value = '';
   }
   update();
 }
@@ -3158,7 +3181,7 @@ function restoreRolesTable(roles) {
   tbody.innerHTML = rows.map(r => `<tr>
     <td><input type="text" value="${(r.name||'').replace(/"/g,'&quot;')}" placeholder="Select or type name-" list="memberDatalist" oninput="update()" /></td>
     <td><input type="text" value="${(r.responsibility||'').replace(/"/g,'&quot;')}" placeholder="What are they responsible for?" oninput="update()" /></td>
-    <td><input type="text" value="${(r.byWhen||'').replace(/"/g,'&quot;')}" placeholder="By when? (e.g., Oct, Ongoing)" oninput="sortRolesTable();update()" /></td>
+    <td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" ${!r.byWhen ? 'selected' : ''}>Choose…</option>${roleWhenOptionsHtml(r.byWhen)}</select></td>
     <td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>
   </tr>`).join('');
 }
@@ -3166,7 +3189,7 @@ function restoreRolesTable(roles) {
 function addRoleRow() {
   const tbody = document.getElementById('rolesTable');
   const row = document.createElement('tr');
-  row.innerHTML = `<td><input type="text" placeholder="Select or type name-" list="memberDatalist" oninput="update()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="update()" /></td><td><input type="text" placeholder="By when? (e.g., Oct, Ongoing)" oninput="sortRolesTable();update()" /></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>`;
+  row.innerHTML = `<td><input type="text" placeholder="Select or type name-" list="memberDatalist" oninput="update()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="update()" /></td><td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" selected>Choose…</option>${roleWhenOptionsHtml('')}</select></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>`;
   tbody.appendChild(row);
   update();
 }
@@ -3177,10 +3200,11 @@ function sortRolesTable() {
 
   const rowData = rows.map(row => {
     const inputs = row.querySelectorAll('input');
+    const whenSelect = row.querySelector('select.role-when-select');
     return {
       name: inputs[0]?.value || '',
       resp: inputs[1]?.value || '',
-      when: inputs[2]?.value || '',
+      when: whenSelect?.value || '',
     };
   });
 
@@ -3196,7 +3220,7 @@ function sortRolesTable() {
     `<tr>
       <td><input type="text" value="${r.name.replace(/"/g,'&quot;')}" placeholder="Select or type name-" list="memberDatalist" oninput="update()" /></td>
       <td><input type="text" value="${r.resp.replace(/"/g,'&quot;')}" placeholder="What are they responsible for?" oninput="update()" /></td>
-      <td><input type="text" value="${r.when.replace(/"/g,'&quot;')}" placeholder="By when? (e.g., Oct, Ongoing)" oninput="sortRolesTable();update()" /></td>
+      <td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" ${!r.when ? 'selected' : ''}>Choose…</option>${roleWhenOptionsHtml(r.when)}</select></td>
       <td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>
     </tr>`
   ).join('');
@@ -3250,13 +3274,13 @@ function autoPopulateRoles() {
   tbody.innerHTML = unique.map(r => `<tr>
     <td><input type="text" value="" placeholder="Assign a name…" list="memberDatalist" oninput="update()" /></td>
     <td><input type="text" value="${r.resp.replace(/"/g,'&quot;')}" placeholder="What are they responsible for?" oninput="update()" /></td>
-    <td><input type="text" value="${r.when}" placeholder="By when?" oninput="sortRolesTable();update()" /></td>
+    <td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" ${!r.when ? 'selected' : ''}>Choose…</option>${roleWhenOptionsHtml(r.when)}</select></td>
     <td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">×</button></td>
   </tr>`).join('');
 
   // Always append one blank row for easy additional entry
   const blankRow = document.createElement('tr');
-  blankRow.innerHTML = `<td><input type="text" placeholder="Add another name…" list="memberDatalist" oninput="update()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="update()" /></td><td><input type="text" placeholder="By when?" oninput="sortRolesTable();update()" /></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">×</button></td>`;
+  blankRow.innerHTML = `<td><input type="text" placeholder="Add another name…" list="memberDatalist" oninput="update()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="update()" /></td><td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" selected>Choose…</option>${roleWhenOptionsHtml('')}</select></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">×</button></td>`;
   tbody.appendChild(blankRow);
 
   update();
@@ -3331,7 +3355,7 @@ function update() {
   const outcome = document.getElementById('specificOutcome').value.trim();
   const roleInputs = Array.from(document.querySelectorAll('#rolesTable input[type=text]'));
   const roleRows = [];
-  for (let i=0;i<roleInputs.length;i+=3) { if (roleInputs[i]?.value.trim() && roleInputs[i+1]?.value.trim()) roleRows.push(true); }
+  for (let i=0;i<roleInputs.length;i+=2) { if (roleInputs[i]?.value.trim() && roleInputs[i+1]?.value.trim()) roleRows.push(true); }
 
   const mMonths = milestones.map(m=>m.month);
   const fall = new Set(['Sum','Aug','Sep','Oct','Nov']); const winter = new Set(['Dec','Jan','Feb']); const spring = new Set(['Mar','Apr','May','Jun']);
@@ -3421,11 +3445,16 @@ function update() {
 }
 
 function getFormData() {
-  const roleInputs = Array.from(document.querySelectorAll('#rolesTable input[type=text]'));
-  const roles = [];
-  for (let i=0;i<roleInputs.length;i+=3) {
-    roles.push({name:roleInputs[i]?.value.trim()||'',responsibility:roleInputs[i+1]?.value.trim()||'',byWhen:roleInputs[i+2]?.value.trim()||''});
-  }
+  const roleRows = Array.from(document.querySelectorAll('#rolesTable tr'));
+  const roles = roleRows.map(row => {
+    const inputs = row.querySelectorAll('input[type=text]');
+    const whenSelect = row.querySelector('select.role-when-select');
+    return {
+      name: inputs[0]?.value.trim() || '',
+      responsibility: inputs[1]?.value.trim() || '',
+      byWhen: whenSelect?.value.trim() || '',
+    };
+  });
   const identity = getLaunchIdentity();
   return {
     teamName: identity.teamName,
