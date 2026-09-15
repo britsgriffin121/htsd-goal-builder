@@ -47,6 +47,41 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 .hero-card p{font-size:15px;color:rgba(255,255,255,0.82);line-height:1.55;max-width:740px}
 .launch-grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:16px;align-items:start}
 @media(max-width:840px){.launch-grid{grid-template-columns:1fr}}
+/* ── Mode gate & team picker ── */
+.mode-gate-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px}
+@media(max-width:700px){.mode-gate-grid{grid-template-columns:1fr}}
+.mode-card{display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:var(--surface);border:2px solid var(--hampton-blue);border-radius:14px;padding:22px 22px 20px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s;box-shadow:0 2px 10px rgba(27,79,168,0.08)}
+.mode-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(27,79,168,0.16)}
+.mode-card-secondary{border-color:var(--border-strong)}
+.mode-card-badge{display:inline-flex;padding:3px 10px;border-radius:999px;background:var(--hampton-gold);color:var(--hampton-blue);font-size:10px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px}
+.mode-card h3{font-family:'DM Serif Display',serif;font-size:21px;font-weight:400;color:var(--text);margin-bottom:8px}
+.mode-card p{font-size:14.5px;color:var(--text-muted);line-height:1.55;margin-bottom:14px}
+.mode-card-cta{font-size:13px;font-weight:700;color:var(--hampton-blue)}
+.team-pick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px}
+@media(max-width:760px){.team-pick-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.team-pick-grid{grid-template-columns:1fr}}
+.team-pick-btn{background:var(--surface);border:1.5px solid var(--border-strong);border-radius:12px;padding:18px 16px;text-align:left;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.15s}
+.team-pick-btn:hover{border-color:var(--hampton-blue);background:var(--hampton-blue-light);transform:translateY(-1px)}
+.team-pick-btn h4{font-size:16px;font-weight:600;color:var(--text);margin-bottom:3px}
+.team-pick-btn span{font-size:12.5px;color:var(--text-muted)}
+/* ── Check-in mode: simplified evidence, hide workstream+chips ── */
+body.checkin-mode .ev-workstream-row,
+body.checkin-mode #evSuggestionsArea{display:none!important}
+body.checkin-mode #evAddRow{display:flex!important}
+/* ── Reflection nudge above milestones ── */
+.reflection-nudge{background:var(--hampton-blue-light);border:1.5px dashed rgba(27,79,168,0.35);border-radius:10px;padding:12px 14px;margin-bottom:14px;display:none}
+body.checkin-mode .reflection-nudge{display:block}
+.reflection-nudge-label{font-size:12.5px;font-weight:700;color:var(--hampton-blue);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.reflection-nudge textarea{width:100%;font-family:'DM Sans',sans-serif;font-size:13.5px;border:1px solid rgba(27,79,168,0.25);border-radius:6px;padding:7px 9px;min-height:44px;background:var(--surface);resize:vertical}
+.reflection-nudge-actions{display:flex;justify-content:flex-end;margin-top:6px}
+.reflection-nudge-btn{background:var(--hampton-blue);color:#fff;border:none;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+.reflection-nudge-btn:hover{background:#163E8A}
+/* ── Autosave indicator ── */
+.autosave-indicator{position:fixed;bottom:14px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 13px;font-size:11.5px;color:var(--text-muted);box-shadow:0 2px 10px rgba(26,25,22,0.1);display:flex;align-items:center;gap:6px;z-index:50;opacity:0;transition:opacity 0.3s}
+.autosave-indicator.show{opacity:1}
+.autosave-dot{width:7px;height:7px;border-radius:50%;background:var(--success);flex-shrink:0}
+.autosave-dot.saving{background:var(--hampton-gold-dark);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
 .conv-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
 .conv-card.gold{border-left:6px solid var(--hampton-gold);border-radius:0 12px 12px 0}
 .conv-card.blue{border-left:6px solid var(--hampton-blue);border-radius:0 12px 12px 0}
@@ -370,7 +405,47 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 <!-- PHASE 1: LAUNCH                                               -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div class="phase-view active" id="phaseView-launch">
-  <div class="launch-shell">
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- MODE GATE — shown first; picks the check-in path or full builder -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="launch-shell" id="modeGateShell">
+    <div class="hero-card">
+      <div class="hero-eyebrow">HTSD Design Team Goal Builder · SY 2026–27</div>
+      <h2>Welcome back.</h2>
+      <p>Pick how your team wants to use this session today.</p>
+    </div>
+    <div class="mode-gate-grid">
+      <button class="mode-card" onclick="enterMode('checkin')">
+        <span class="mode-card-badge">Most teams start here</span>
+        <h3>Check in on our spring goals</h3>
+        <p>Pick your school and we'll pull in the goals your team already set in May. Spend today mapping your timeline, checkpoints, and evidence — not starting over.</p>
+        <span class="mode-card-cta">Choose this →</span>
+      </button>
+      <button class="mode-card mode-card-secondary" onclick="enterMode('new')">
+        <h3>Set brand new goals</h3>
+        <p>Start from a blank slate with the full goal-builder — pick operational plan priorities, competencies, and build 1–5 new goals from scratch.</p>
+        <span class="mode-card-cta">Choose this →</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <!-- CHECK-IN TEAM PICKER — shown after "Check in on spring goals"    -->
+  <!-- ═══════════════════════════════════════════════════════════════ -->
+  <div class="launch-shell" id="checkinPickerShell" style="display:none;">
+    <div class="hero-card">
+      <div class="hero-eyebrow">Check In · SY 2026–27</div>
+      <h2>Which school are you with today?</h2>
+      <p>We'll load your team's spring goals automatically — no setup needed.</p>
+    </div>
+    <div class="team-pick-grid" id="teamPickGrid"></div>
+    <div style="margin-top:16px;">
+      <button class="btn-secondary" onclick="backToModeGate()">← Back</button>
+    </div>
+  </div>
+
+  <div class="launch-shell" id="fullLaunchShell" style="display:none;">
     <div class="hero-card">
       <div class="hero-eyebrow">HTSD Design Team Goal Builder · SY 2026–27</div>
       <h2>Turn today's learning into a focused year of action.</h2>
@@ -630,6 +705,16 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
       <!-- Milestone body — hidden until completion month is selected -->
       <div id="milestoneBody" style="display:none;">
         <p class="section-desc" style="margin-top:8px;">Each milestone should be a specific action or checkpoint, not just a date. Suggestions are pre-filled below — edit, remove, or add your own.</p>
+
+        <div class="reflection-nudge">
+          <div class="reflection-nudge-label">💭 From this morning's ecosystem reflection</div>
+          <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:6px;">Got a "next step" idea from your team's reflection you want to build in? Paste it here and turn it into a milestone.</p>
+          <textarea id="reflectionPasteBox" placeholder="Paste an idea from your reflection report…"></textarea>
+          <div class="reflection-nudge-actions">
+            <button class="reflection-nudge-btn" onclick="addMilestoneFromReflection()">+ Add as milestone</button>
+          </div>
+        </div>
+
         <div class="timeline-vis"><div class="timeline-track" id="timelineVis"></div></div>
 
         <div id="milestoneListLabel" style="display:none;font-size:11px;font-weight:600;color:var(--hampton-blue);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;margin-top:14px;">Your milestones</div>
@@ -1445,17 +1530,22 @@ function switchToPmView() {
 
 function switchToGoalView(idx) {
   if (idx !== activeGoalIdx) {
-    // Only save current goal if it has meaningful content — same guard as switchGoal
+    // Save the OUTGOING goal's DOM content into its own array slot BEFORE
+    // moving activeGoalIdx — this must happen first, or the save below
+    // writes the outgoing goal's text into the new goal's slot instead.
+    // (Bug fix: previously this delegated to switchPhase('goals'), which
+    // unconditionally calls saveCurrentGoal() again AFTER activeGoalIdx had
+    // already moved, silently overwriting the goal being switched TO with
+    // whatever was still on screen from the goal being switched FROM.)
     const current = getFormData();
     const hasContent = current.teamGoal || current.specificOutcome ||
                        current.goalNickname || current.selectedGoalNum ||
                        (current.selectedComps||[]).length > 0 ||
                        (current.evidenceItems||[]).length > 0 ||
                        (current.milestones||[]).length > 0;
-    if (hasContent) saveCurrentGoal();
+    if (hasContent) { goals[activeGoalIdx] = current; persistGoals(); }
     activeGoalIdx = idx;
   }
-  switchPhase('goals');
   renderGoalTabs();
   restoreFormData(goals[activeGoalIdx]);
 }
@@ -1550,6 +1640,353 @@ function updateMemberDropdowns() {
   const dl = document.getElementById('memberDatalist');
   if (dl) dl.innerHTML = names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}"></option>`).join('');
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODE GATE + CHECK-IN PATH
+// ─────────────────────────────────────────────────────────────────────────────
+function enterMode(mode) {
+  if (mode === 'new') {
+    document.body.classList.remove('checkin-mode');
+    localStorage.removeItem('htsd_checkin_team');
+    document.getElementById('modeGateShell').style.display = 'none';
+    document.getElementById('checkinPickerShell').style.display = 'none';
+    document.getElementById('fullLaunchShell').style.display = '';
+    return;
+  }
+  // mode === 'checkin'
+  document.getElementById('modeGateShell').style.display = 'none';
+  document.getElementById('fullLaunchShell').style.display = 'none';
+  const shell = document.getElementById('checkinPickerShell');
+  shell.style.display = '';
+  const grid = document.getElementById('teamPickGrid');
+  grid.innerHTML = Object.keys(SPRING_GOALS).map(team => {
+    const n = SPRING_GOALS[team].length;
+    return `<button class="team-pick-btn" onclick="startCheckin('${team.replace(/'/g,"\\'")}')">
+      <h4>${team}</h4>
+      <span>${n} spring goal${n === 1 ? '' : 's'} on file</span>
+    </button>`;
+  }).join('');
+}
+
+function backToModeGate() {
+  document.getElementById('checkinPickerShell').style.display = 'none';
+  document.getElementById('fullLaunchShell').style.display = 'none';
+  document.getElementById('modeGateShell').style.display = '';
+}
+
+function startCheckin(teamName) {
+  const springGoals = SPRING_GOALS[teamName] || [];
+  document.body.classList.add('checkin-mode');
+  localStorage.setItem('htsd_checkin_team', teamName);
+
+  // Build real goal objects from the spring snapshot, only if this team's
+  // goals aren't already loaded (so re-entering check-in doesn't duplicate).
+  const alreadyLoaded = goals.length && goals[0].teamName === teamName &&
+    goals.some(g => g.teamGoal);
+  if (!alreadyLoaded) {
+    goals = springGoals.map(sg => {
+      const g = getBlankGoal();
+      Object.assign(g, {
+        teamName,
+        schoolYear: '2026-27',
+        selectedGoal: sg.selectedGoal,
+        selectedGoalNum: sg.selectedGoalNum,
+        outcomeKey: sg.outcomeKey,
+        specificOutcome: sg.specificOutcome,
+        teamGoal: sg.teamGoal,
+        goalNickname: sg.teamGoal ? sg.teamGoal.slice(0, 30) : '',
+        evidenceItems: (sg.evidenceItems || []).map(e => ({...e})),
+      });
+      return g;
+    });
+    if (!goals.length) goals = [getBlankGoal()];
+    activeGoalIdx = 0;
+    persistGoals();
+  }
+
+  document.getElementById('launchTeamName').value = teamName;
+  document.getElementById('launchSchoolYear').value = '2026–27';
+  saveLaunchIdentity();
+  localStorage.setItem('htsd_has_launched', 'true');
+  // Paint the DOM with goal 0's data BEFORE switchPhase runs, since
+  // switchPhase() calls saveCurrentGoal() first (reads DOM -> goals array) —
+  // painting first makes that a harmless no-op instead of a clobber.
+  renderGoalTabs();
+  restoreFormData(goals[activeGoalIdx]);
+  switchPhase('goals');
+  startSheetAutosave();
+}
+
+function addMilestoneFromReflection() {
+  const box = document.getElementById('reflectionPasteBox');
+  const text = (box?.value || '').trim();
+  if (!text) return;
+  milestones.push({month: goalCompletionMonthFallback(), text, benchmark: ''});
+  sortMilestones();
+  renderMilestones();
+  update();
+  box.value = '';
+  showToast('Added to your milestones ✓', 'success');
+}
+
+function goalCompletionMonthFallback() {
+  const sel = document.getElementById('goalCompletionMonth');
+  return sel?.value || 'Sep';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTOSAVE TO GOOGLE SHEET — periodic backup so no team loses work if a
+// browser tab closes or crashes. Reuses the same Apps Script endpoint as the
+// export-time submission. Silent unless it fails.
+// ─────────────────────────────────────────────────────────────────────────────
+const AUTOSAVE_INTERVAL_MS = 45000; // 45s
+let autosaveTimer = null;
+let autosaveInFlight = false;
+
+function startSheetAutosave() {
+  const el = document.getElementById('autosaveIndicator');
+  if (el) el.classList.add('show');
+  if (autosaveTimer) return;
+  autosaveTimer = setInterval(runSheetAutosave, AUTOSAVE_INTERVAL_MS);
+}
+
+function setAutosaveState(state) {
+  const dot = document.getElementById('autosaveDot');
+  const label = document.getElementById('autosaveLabel');
+  if (!dot || !label) return;
+  if (state === 'saving') {
+    dot.classList.add('saving');
+    label.textContent = 'Saving…';
+  } else if (state === 'saved') {
+    dot.classList.remove('saving');
+    label.textContent = 'Saved just now';
+  } else if (state === 'error') {
+    dot.classList.remove('saving');
+    label.textContent = 'Backup save failed — your work is still saved on this device';
+  }
+}
+
+function runSheetAutosave() {
+  if (autosaveInFlight) return;
+  saveCurrentGoal();
+  const validGoals = goals.filter(g => g.teamGoal || g.specificOutcome || g.selectedGoalNum);
+  if (!validGoals.length) return;
+  autosaveInFlight = true;
+  setAutosaveState('saving');
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzYMWLCPTyz_2H5DHjKT8l-KeTivGndrG3s1kUMGIrb_4vMrIVZhvqy2XKztHF-baQDBQ/exec';
+  fetch(APPS_SCRIPT_URL, {
+    method: 'POST',
+    mode: 'cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      teamName: validGoals[0]?.teamName || 'Design Team',
+      autosave: true,
+      goals: validGoals.map(g => ({
+        goalNum:         g.selectedGoalNum,
+        outcomeKey:      g.outcomeKey || 'unmatched',
+        specificOutcome: g.specificOutcome || '',
+        teamGoal:        g.teamGoal || '',
+        evidenceItems:   g.evidenceItems || [],
+        milestones:      g.milestones || [],
+      }))
+    })
+  })
+  .then(() => setAutosaveState('saved'))
+  .catch(() => setAutosaveState('error'))
+  .finally(() => { autosaveInFlight = false; });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SPRING 2026 GOAL SNAPSHOT — baked-in copy of the "Goal Submissions" Google
+// Sheet (source of truth: https://docs.google.com/spreadsheets/d/1-3S-g9QQ8p6ehBKD411MCLzq03w3RqGwO2qB_e5dGrc)
+// pulled 2026-09-15. Powers the "Check in on our spring goals" launch path.
+// Only the 5 schools meeting Sept 29-30 are included (Special Ed and
+// Assessment Team are excluded — Assessment Team meets separately that day).
+// ─────────────────────────────────────────────────────────────────────────────
+const SPRING_GOALS = {
+  "Hampton High School (HHS)": [
+    {
+      selectedGoalNum: 1,
+      selectedGoal: "Goal 1: Develop and Demonstrate Portrait of a Talbot Competencies",
+      outcomeKey: "g1_reflection",
+      specificOutcome: "Strengthen student reflection and self-assessment practices aligned to Portrait competencies.",
+      teamGoal: "We would like to build more opportunities for student self reflection around the competencies. A long range goal is to have students develop an authentic portfolio/artifact/scenario where they can put these reflections into a real-world practice.",
+      evidenceItems: [
+        {text:"Student work samples", tier:3, benchmark:"At least once per quarter, teachers will have students reflect on competency growth in a specific assignment, project or class activity using a provided structure."},
+        {text:"Portfolio artifacts", tier:3, benchmark:'Students will complete at least one reflection per quarter in each class. These will be housed in their "Class of__" Google Classrooms.'},
+        {text:"Student-demonstrated skill change", tier:4, benchmark:"All HHS students will demonstrate a deeper understanding of the competencies through self-reflection."}
+      ]
+    }
+  ],
+  "Central Elementary": [
+    {
+      selectedGoalNum: 2,
+      selectedGoal: "Goal 2: Demonstrate Learning in Meaningful Ways",
+      outcomeKey: "g2_exhibitions",
+      specificOutcome: "Refine exhibition experiences to emphasize reflection, growth, and competency development.",
+      teamGoal: "Our design team will implement an open house showcase in all k-5 classrooms in March 2027 so students can emphasize reflection, growth, and competency development for an authentic audience.",
+      evidenceItems: [
+        {text:"Student feedback on conference or exhibition experience", tier:2, benchmark:"100% of participating students"},
+        {text:"Number of classrooms using exhibition formats", tier:1, benchmark:"100% of participating students"}
+      ]
+    },
+    {
+      selectedGoalNum: 1,
+      selectedGoal: "Goal 1: Develop and Demonstrate Portrait of a Talbot Competencies",
+      outcomeKey: "g1_reflection",
+      specificOutcome: "Strengthen student reflection and self-assessment practices aligned to Portrait competencies.",
+      teamGoal: "Teachers will use natural integration of the learning progressions and I can statements to further student reflection and self-assessment practices aligned to PoaT.",
+      evidenceItems: [
+        {text:"Increase in quality and depth of student self-reflection over time", tier:4, benchmark:"90% of teachers report increased student understanding"}
+      ]
+    },
+    {
+      selectedGoalNum: 3,
+      selectedGoal: "Goal 3: Student Voice and Choice in Learning",
+      outcomeKey: "g3_passion",
+      specificOutcome: "Scale curiosity quests, inquiry experiences, and independent learning opportunities.",
+      teamGoal: "Our fourth and fifth grade students will engage in curiosity quests so students can follow their passions and have voice and choice in their learning.",
+      evidenceItems: [
+        {text:"Passion project artifacts, products, and presentations", tier:3, benchmark:"100%"}
+      ]
+    },
+    {
+      selectedGoalNum: 2,
+      selectedGoal: "Goal 2: Demonstrate Learning in Meaningful Ways",
+      outcomeKey: "g2_portfolios",
+      specificOutcome: "Explore portfolio systems and learner evidence collection.",
+      teamGoal: "Our 2nd and 3rd grade students will create a portfolios and learner evidence collections to showcase their Portrait of a Talbot skills through the year.",
+      evidenceItems: [
+        {text:"Portfolio evidence collections across grade levels", tier:3, benchmark:"90-100%"}
+      ]
+    },
+    {
+      selectedGoalNum: 5,
+      selectedGoal: "Goal 5: Build Capacity for Learner-Centered Instruction",
+      outcomeKey: "g5_linkit",
+      specificOutcome: "Implement LinkIt! to support Tier I instruction. Implement Intervention Manager to support MTSS decision-making.",
+      teamGoal: "Our teachers and staff will implement Link-It to support tier 1 instruction. Support teachers will implement intervention manager to support MTSS decision making.",
+      evidenceItems: [
+        {text:"Number of staff using LinkIt! for MTSS decision-making", tier:1, benchmark:"74%"}
+      ]
+    }
+  ],
+  "Hampton Middle School (HMS)": [
+    {
+      selectedGoalNum: 1,
+      selectedGoal: "Goal 1: Develop and Demonstrate Portrait of a Talbot Competencies",
+      outcomeKey: "g1_reflection",
+      specificOutcome: "Refine back to school PoT activities",
+      teamGoal: "Review and refine 6th-7th grade PoT lessons & create a new lesson for 8th grade",
+      evidenceItems: [
+        {text:"Number of students experiencing a new (to them) PoT activity", tier:1, benchmark:"90-100%"}
+      ]
+    },
+    {
+      selectedGoalNum: 2,
+      selectedGoal: "Goal 2: Demonstrate Learning in Meaningful Ways",
+      outcomeKey: "g2_reflection",
+      specificOutcome: "Develop common expectations for student reflection and self-assessment.",
+      teamGoal: "Continue with 6th Grade Day of Service for AM and PM sessions and have 7th grade students reflect upon Day of Service - how would they want to make an impact this year? (Do this within Refugee unit)",
+      evidenceItems: []
+    },
+    {
+      selectedGoalNum: 3,
+      selectedGoal: "Goal 4: Connect Learning to Life Beyond School",
+      outcomeKey: "g4_exploration",
+      specificOutcome: "",
+      teamGoal: "Continue with 6th Grade Futures Day & 8th Grade Financial Reality Fair. Revise 7th Pathfinder Experience.",
+      evidenceItems: []
+    },
+    {
+      selectedGoalNum: 4,
+      selectedGoal: "Goal 2: Demonstrate Learning in Meaningful Ways",
+      outcomeKey: "g2_portfolios",
+      specificOutcome: "",
+      teamGoal: "Teachers will be encouraged to complete learning walks - use asynchronous time (teacher portfolios). Investigate/pilot digital portfolios and reflection tools as a way to demonstrate learning with a group of students who represent different grades.",
+      evidenceItems: []
+    },
+    {
+      selectedGoalNum: 5,
+      selectedGoal: "Goal 5: Build Capacity for Learner-Centered Instruction",
+      outcomeKey: "g5_learning_walks",
+      specificOutcome: "",
+      teamGoal: "Teachers will be encouraged to complete learning walks.",
+      evidenceItems: []
+    },
+    {
+      selectedGoalNum: 6,
+      selectedGoal: "Goal 2: Demonstrate Learning in Meaningful Ways",
+      outcomeKey: "g2_slc",
+      specificOutcome: "",
+      teamGoal: "Research best practices with SLCs. Visit other schools who do student-led conferences: Avonworth & Winchester-Thurston. Pilot with a student group - diverse students during tutorial.",
+      evidenceItems: []
+    }
+  ],
+  "Wyland Elementary": [
+    {
+      selectedGoalNum: 1,
+      selectedGoal: "Goal 2: Demonstrate Learning in Meaningful Ways",
+      outcomeKey: "g2_portfolios",
+      specificOutcome: "",
+      teamGoal: "To continue with student portfolios and have some teachers pilot Spaces EDU to help the students have a choice in what is placed in their portfolios.",
+      evidenceItems: []
+    },
+    {
+      selectedGoalNum: 2,
+      selectedGoal: "Goal 2: Demonstrate Learning in Meaningful Ways",
+      outcomeKey: "g2_slc",
+      specificOutcome: "",
+      teamGoal: "To explore student-led conferences - start in small groups or in the classrooms with teachers, rather than with parents at the beginning of the year.",
+      evidenceItems: []
+    },
+    {
+      selectedGoalNum: 3,
+      selectedGoal: "Goal 3: Student Voice and Choice in Learning",
+      outcomeKey: "g3_goalsetting",
+      specificOutcome: "",
+      teamGoal: "Implement PBIS throughout the building.",
+      evidenceItems: [
+        {text:"", tier:1, benchmark:"Teachers are issuing 5 tickets per week"}
+      ]
+    }
+  ],
+  "Poff Elementary": [
+    {
+      selectedGoalNum: 3,
+      selectedGoal: "Goal 3: Student Voice and Choice in Learning",
+      outcomeKey: "g3_passion",
+      specificOutcome: "Scale curiosity quests, inquiry experiences, and independent learning opportunities.",
+      teamGoal: "Our design team will partner SIDE Quest (Science, inquiry, design, and exploration) and Curiosity Quest.",
+      evidenceItems: [
+        {text:"Passion project artifacts, products, and presentations", tier:3, benchmark:"Grades 1-5"},
+        {text:"Number of passion project or inquiry experience participants", tier:1, benchmark:"100%"}
+      ]
+    },
+    {
+      selectedGoalNum: 2,
+      selectedGoal: "Goal 2: Demonstrate Learning in Meaningful Ways",
+      outcomeKey: "g2_audiences",
+      specificOutcome: "Increase opportunities for students to communicate learning to authentic audiences.",
+      teamGoal: "Our design team will provide opportunities to showcase POT competencies at Open House in March.",
+      evidenceItems: [
+        {text:"Student feedback on conference or exhibition experience", tier:2, benchmark:"Grades 1-5"},
+        {text:"Exhibition artifacts and student presentation materials", tier:3, benchmark:"Grades 1-5"}
+      ]
+    },
+    {
+      selectedGoalNum: 5,
+      selectedGoal: "Goal 5: Build Capacity for Learner-Centered Instruction",
+      outcomeKey: "g5_linkit",
+      specificOutcome: "Implement LinkIt! to support Tier I instruction. Implement Intervention Manager to support MTSS decision-making.",
+      teamGoal: "Our design team will continue to learn and implement new MTSS/PBIS model throughout the 2026-2027 school year. This will include the use of LinkIt to streamline data sharing.",
+      evidenceItems: [
+        {text:"Number of staff using LinkIt! for MTSS decision-making", tier:1, benchmark:"Grades K-5"},
+        {text:"Student achievement data connected to instructional and curriculum shifts", tier:4, benchmark:"Grades K-5"}
+      ]
+    }
+  ]
+};
 
 const OUTCOMES = {
   1: [
@@ -3846,6 +4283,27 @@ window.addEventListener('load', () => {
   initGoals();
   document.getElementById('teamGoal')?.addEventListener('input', queueGoalAutosave);
   document.getElementById('specificOutcome')?.addEventListener('input', queueGoalAutosave);
+
+  // If this browser already has an in-progress check-in session, skip the
+  // mode gate and drop them back where they were instead of asking again.
+  const savedCheckinTeam = localStorage.getItem('htsd_checkin_team');
+  const hasLaunched = localStorage.getItem('htsd_has_launched') === 'true';
+  if (savedCheckinTeam && hasLaunched && goals.some(g => g.teamGoal || g.specificOutcome)) {
+    document.body.classList.add('checkin-mode');
+    document.getElementById('modeGateShell').style.display = 'none';
+    document.getElementById('checkinPickerShell').style.display = 'none';
+    document.getElementById('fullLaunchShell').style.display = 'none';
+    startSheetAutosave();
+    const savedPhase = localStorage.getItem('htsd_phase');
+    if (savedPhase && savedPhase !== 'launch') switchPhase(savedPhase);
+  } else if (hasLaunched && goals.some(g => g.teamGoal || g.specificOutcome)) {
+    // Returning to the full (non-check-in) flow mid-session
+    document.getElementById('modeGateShell').style.display = 'none';
+    document.getElementById('checkinPickerShell').style.display = 'none';
+    document.getElementById('fullLaunchShell').style.display = '';
+    const savedPhase = localStorage.getItem('htsd_phase');
+    if (savedPhase && savedPhase !== 'launch') switchPhase(savedPhase);
+  }
 });
 </script>
 
@@ -3858,6 +4316,11 @@ window.addEventListener('load', () => {
     <div class="page-footer-right">
       Built in partnership with Hampton Township School District
     </div>
+  </div>
+
+  <div class="autosave-indicator" id="autosaveIndicator">
+    <span class="autosave-dot" id="autosaveDot"></span>
+    <span id="autosaveLabel">Backed up automatically</span>
   </div>
 </body>
 </html>
