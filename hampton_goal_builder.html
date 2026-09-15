@@ -2307,13 +2307,13 @@ function renderCheckinGuidingQuestions() {
     return `<div class="q-block">
       <div class="q-text"><span class="q-number">${i+1}</span>${esc(q.text)}${unanswered ? '<span class="q-unanswered-dot" title="Not yet answered"></span>' : ''}</div>
       <div class="q-answer-row">
+        <input type="text" placeholder="${esc(q.placeholder)}" value="${(m.text||'').replace(/"/g,'&quot;')}" oninput="updateCheckinGuidingAnswer(${i}, 'text', this.value, true)" />
         <div class="q-month-field">
           <label class="q-month-label">${esc(q.monthLabel || 'Month')}</label>
           <select onchange="updateCheckinGuidingAnswer(${i}, 'month', this.value)">
             ${months.map(mo => `<option value="${mo}"${mo === m.month ? ' selected' : ''}>${mo}</option>`).join('')}
           </select>
         </div>
-        <input type="text" placeholder="${esc(q.placeholder)}" value="${(m.text||'').replace(/"/g,'&quot;')}" oninput="updateCheckinGuidingAnswer(${i}, 'text', this.value, true)" />
       </div>
     </div>`;
   }).join('');
