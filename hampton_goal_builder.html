@@ -6,6 +6,7 @@
 <title>Hampton Design Team Goal Builder</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.2/jszip.min.js"></script>
 <style>
 :root{--hampton-blue:#1B4FA8;--hampton-gold:#F5C518;--hampton-gold-dark:#C49A10;--hampton-blue-light:#E8EFF9;--hampton-blue-mid:#3B6DD4;--bg:#F7F6F2;--surface:#FFFFFF;--surface-2:#F0EDE6;--text:#1A1916;--text-muted:#6B6860;--text-light:#9B9890;--border:rgba(26,25,22,0.1);--border-strong:rgba(26,25,22,0.2);--success:#2D7D46;--success-bg:#EAF5EE;--warn:#B45309;--warn-bg:#FEF3C7;--empty:#D1CFC8;--radius:10px;--radius-sm:6px}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -594,6 +595,77 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 <div class="phase-view" id="phaseView-goals">
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- STEP 0: KICKOFF — frame the year, set starting norms & cadence   -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="checkinKickoffView" style="display:none;">
+  <div class="pm-phase-padding" style="max-width:760px;margin:0 auto;">
+    <div class="hero-card" style="margin-bottom:18px;">
+      <div class="hero-eyebrow">Welcome back</div>
+      <h2 id="checkinKickoffGreeting">Welcome back, team.</h2>
+      <p id="checkinKickoffFraming"></p>
+    </div>
+
+    <div class="conv-card gold" style="margin-bottom:18px;">
+      <span class="card-kicker">The shape of your year</span>
+      <p style="font-size:14px;color:var(--text);line-height:1.6;margin-bottom:0;">
+        Today is one checkpoint in a five-checkpoint rhythm — September, November, January, March, and May.
+        Each one asks something a little different of you, but the throughline is the same: come back together,
+        look honestly at what's true, and leave with a plan for what's next. Today's job is to set that plan
+        through November.
+      </p>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">PLAN</div>
+        <div>
+          <div class="section-title">Cross-Goal Responsibilities</div>
+          <div class="section-desc">Before you dig into individual goals, assign owners to the responsibilities that span all of them. You can always adjust this later today.</div>
+        </div>
+      </div>
+      <table class="pm-roles-table" id="pmRolesTableKickoff">
+        <thead>
+          <tr>
+            <th style="width:22%">Team Member</th>
+            <th>Responsibility</th>
+            <th style="width:12%">Cadence</th>
+            <th style="width:4%"></th>
+          </tr>
+        </thead>
+        <tbody id="pmRolesTbodyKickoff"></tbody>
+      </table>
+      <button class="pm-add-row-btn" onclick="pmAddRow('pmRolesTbodyKickoff')">＋ Add Responsibility</button>
+    </div>
+
+    <hr class="pm-divider">
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">📅</div>
+        <div>
+          <div class="section-title">Minimum Meeting Cadence</div>
+          <div class="section-desc">These five checkpoints are the minimum meeting cadence for the year. <strong>Schedule all five today</strong> and put 30 minutes on the calendar before you leave.</div>
+        </div>
+      </div>
+      <table class="cadence-table" id="pmCadenceTableKickoff">
+        <thead>
+          <tr>
+            <th style="width:8%">Month</th>
+            <th>Focus</th>
+            <th style="width:18%">Meeting Date</th>
+          </tr>
+        </thead>
+        <tbody id="pmCadenceTbodyKickoff"></tbody>
+      </table>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+      <button class="btn-primary" onclick="proceedFromCheckinKickoff()">Start on today's goals →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- STEP 1: REVIEW GOALS — read-only review; proceed or add/edit/remove -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div id="checkinSummaryView" style="display:none;">
@@ -982,7 +1054,9 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 <!-- PHASE 4: PORTFOLIO REVIEW                                     -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div class="phase-view" id="phaseView-portfolio">
-  <div class="portfolio-shell">
+
+  <!-- SUMMER MODE: Portfolio Review (unchanged) -->
+  <div class="portfolio-shell" id="portfolioSummerShell">
     <div class="hero-card">
       <div class="hero-eyebrow">Step 4 · Portfolio Review</div>
       <h2>Look across your full set before exporting.</h2>
@@ -1025,6 +1099,108 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
       <button class="btn-primary" onclick="handlePortfolioContinue()">Continue to Export →</button>
     </div>
   </div>
+
+  <!-- CHECK-IN MODE: Team Project Plan close-out -->
+  <div class="portfolio-shell" id="checkinCloseoutShell" style="display:none;">
+    <div class="hero-card">
+      <div class="hero-eyebrow">Your Team Project Plan</div>
+      <h2>Here's the plan you're leaving with today.</h2>
+      <p id="checkinCloseoutIntro">Confirm your norms one more time, then see how your work adds up across goals and people.</p>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">PLAN</div>
+        <div>
+          <div class="section-title">Cross-Goal Responsibilities</div>
+          <div class="section-desc">Confirm or adjust before you go — this is what keeps the team running across the year.</div>
+        </div>
+      </div>
+      <table class="pm-roles-table" id="pmRolesTableCloseout">
+        <thead>
+          <tr>
+            <th style="width:22%">Team Member</th>
+            <th>Responsibility</th>
+            <th style="width:12%">Cadence</th>
+            <th style="width:4%"></th>
+          </tr>
+        </thead>
+        <tbody id="pmRolesTbodyCloseout"></tbody>
+      </table>
+      <button class="pm-add-row-btn" onclick="pmAddRow('pmRolesTbodyCloseout')">＋ Add Responsibility</button>
+    </div>
+
+    <hr class="pm-divider">
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">📅</div>
+        <div>
+          <div class="section-title">Minimum Meeting Cadence</div>
+          <div class="section-desc">Last chance to lock in all five dates before you leave.</div>
+        </div>
+      </div>
+      <table class="cadence-table" id="pmCadenceTableCloseout">
+        <thead>
+          <tr>
+            <th style="width:8%">Month</th>
+            <th>Focus</th>
+            <th style="width:18%">Meeting Date</th>
+          </tr>
+        </thead>
+        <tbody id="pmCadenceTbodyCloseout"></tbody>
+      </table>
+    </div>
+
+    <hr class="pm-divider">
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">🗓️</div>
+        <div>
+          <div class="section-title">Cross-Goal Timeline</div>
+          <div class="section-desc">When is evidence being collected across your goals this year?</div>
+        </div>
+      </div>
+      <div id="checkinTimelineVis" style="margin-top:8px;"></div>
+    </div>
+
+    <hr class="pm-divider">
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">👤</div>
+        <div>
+          <div class="section-title">Who's Doing What</div>
+          <div class="section-desc">Each person's responsibilities across all goals, in one place.</div>
+        </div>
+      </div>
+      <div id="checkinPersonTaskLists"></div>
+    </div>
+
+    <hr class="pm-divider">
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">🗒️</div>
+        <div>
+          <div class="section-title">Draft November Check-In Agenda</div>
+          <div class="section-desc">A starting point for your next meeting — built from what you set today. Edit it however you'd like.</div>
+        </div>
+      </div>
+      <textarea id="checkinNovAgendaText" style="width:100%;min-height:260px;font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;padding:14px;border-radius:var(--radius-sm);border:1.5px solid var(--border-strong);" oninput="persistNovAgendaEdits()"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn-secondary" onclick="regenerateNovAgenda()">↻ Regenerate from current data</button>
+        <button class="btn-secondary" onclick="exportNovAgendaDocx()">⬇ Download as Word doc</button>
+      </div>
+    </div>
+
+    <div class="portfolio-actions">
+      <button class="btn-secondary" onclick="switchPhase('goals')">← Back to Goals</button>
+      <button class="btn-primary" onclick="switchPhase('export')">Continue to Export →</button>
+    </div>
+  </div>
+
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
@@ -1316,6 +1492,314 @@ function updateNickname() {
 }
 
 // ----------------------------------------------------------
+// CHECK-IN: TEAM PROJECT PLAN CLOSE-OUT
+// ----------------------------------------------------------
+// Replaces Portfolio Review for check-in mode. Confirms the norms set at
+// Kickoff one more time, then surfaces the "hidden gems" that used to only
+// show up in the exported PDF: a cross-goal timeline of when evidence is
+// being collected, and a per-person view of everything each teammate owns
+// across all goals plus any cross-goal responsibilities assigned to them.
+function renderCheckinCloseout() {
+  renderPmView();
+  renderCheckinCrossGoalTimeline();
+  renderCheckinPersonTaskLists();
+  initNovAgendaText();
+}
+
+function renderCheckinCrossGoalTimeline() {
+  const container = document.getElementById('checkinTimelineVis');
+  if (!container) return;
+  const CHART_MONTHS = ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
+  const GOAL_COLORS = ['#1B4FA8','#E84D98','#19D3C5','#888888','#2C3E50'];
+
+  // Check-in mode has no milestones/goalCompletionMonth — the equivalent
+  // "shape of the work" signal is each goal's spread of evidence collection
+  // months, from earliest to latest planned collection.
+  const rows = goals.map((g, gi) => {
+    const monthIdxs = (g.evidenceItems || [])
+      .filter(e => e.text && e.text.trim() && e.collectMonth)
+      .map(e => CHART_MONTHS.indexOf(e.collectMonth))
+      .filter(idx => idx !== -1);
+    const label = g.goalNickname || g.teamGoal?.substring(0, 32) || `Goal ${gi + 1}`;
+    return {
+      label,
+      color: GOAL_COLORS[gi % GOAL_COLORS.length],
+      startIdx: monthIdxs.length ? Math.min(...monthIdxs) : null,
+      endIdx: monthIdxs.length ? Math.max(...monthIdxs) : null,
+    };
+  });
+
+  if (!rows.length) {
+    container.innerHTML = '<p style="font-size:13px;color:var(--text-muted);font-style:italic;">Add goals with evidence collection dates to see your timeline.</p>';
+    return;
+  }
+
+  const hasAnyDates = rows.some(r => r.startIdx !== null);
+  if (!hasAnyDates) {
+    container.innerHTML = '<p style="font-size:13px;color:var(--text-muted);font-style:italic;">Set evidence collection months on your goals to see them mapped here.</p>';
+    return;
+  }
+
+  const labelColW = 130;
+  const monthColW = 44;
+  const header = `<div style="display:flex;margin-bottom:4px;"><div style="width:${labelColW}px;flex-shrink:0;"></div>${CHART_MONTHS.map(mo => `<div style="width:${monthColW}px;flex-shrink:0;text-align:center;font-size:11px;font-weight:700;color:var(--text-muted);">${mo}</div>`).join('')}</div>`;
+
+  const rowsHtml = rows.map(r => {
+    const track = `<div style="position:relative;width:${monthColW * CHART_MONTHS.length}px;height:16px;background:var(--surface-2);border-radius:8px;">` +
+      (r.startIdx !== null ? `<div style="position:absolute;left:${r.startIdx * monthColW}px;width:${(r.endIdx - r.startIdx + 1) * monthColW}px;height:16px;background:${r.color};border-radius:8px;"></div>` : '') +
+      `</div>`;
+    return `<div style="display:flex;align-items:center;margin-bottom:8px;">
+      <div style="width:${labelColW}px;flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--text);padding-right:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.label)}">${esc(r.label)}</div>
+      ${track}
+    </div>`;
+  }).join('');
+
+  container.innerHTML = `<div style="overflow-x:auto;padding-bottom:4px;"><div style="min-width:${labelColW + monthColW * CHART_MONTHS.length}px;">${header}${rowsHtml}</div></div>`;
+}
+
+function renderCheckinPersonTaskLists() {
+  const container = document.getElementById('checkinPersonTaskLists');
+  if (!container) return;
+
+  // Build person -> tasks map. Same logic as the PDF export's per-person
+  // pages (personMap in exportAllGoalsPDF), just rendered as HTML instead
+  // of drawn to a PDF canvas — this is the "hidden gem" Brittany wanted
+  // surfaced in the interface, not just at export time.
+  const personMap = {};
+  goals.forEach((g, gi) => {
+    (g.roles || []).forEach(r => {
+      if (!r.name || !r.responsibility) return;
+      if (!personMap[r.name]) personMap[r.name] = { crossGoal: [], goalTasks: [] };
+      personMap[r.name].goalTasks.push({ goalIdx: gi, goal: g, responsibility: r.responsibility, byWhen: r.byWhen || '' });
+    });
+  });
+  (pmData?.crossGoalRoles || []).forEach(r => {
+    if (!r.name || !r.responsibility) return;
+    if (!personMap[r.name]) personMap[r.name] = { crossGoal: [], goalTasks: [] };
+    personMap[r.name].crossGoal.push({ responsibility: r.responsibility, cadence: r.cadence || '' });
+  });
+
+  const people = Object.keys(personMap);
+  if (!people.length) {
+    container.innerHTML = '<p style="font-size:13px;color:var(--text-muted);font-style:italic;">Assign names in Roles & Responsibilities to see each person\'s task list here.</p>';
+    return;
+  }
+
+  const PERSON_COLORS = ['#1B4FA8','#19D3C5','#E84D98','#F5A623','#2C3E50'];
+  const DUE_SORT = {Aug:1,Sep:2,Oct:3,Nov:4,Dec:5,Jan:6,Feb:7,Mar:8,Apr:9,May:10,Jun:11};
+  const GOAL_COLORS = ['#1B4FA8','#E84D98','#19D3C5','#888888','#2C3E50'];
+
+  container.innerHTML = people.map((person, pi) => {
+    const pc = PERSON_COLORS[pi % PERSON_COLORS.length];
+    const crossGoalTasks = personMap[person].crossGoal || [];
+    const allGoalTasks = personMap[person].goalTasks || [];
+    const taskCount = crossGoalTasks.length + allGoalTasks.length;
+
+    const flatTasks = [];
+    crossGoalTasks.forEach(t => flatTasks.push({ badgeLabel: 'ALL', badgeColor: '#333333', responsibility: t.responsibility, due: t.cadence || '' }));
+    allGoalTasks.forEach(t => flatTasks.push({ badgeLabel: 'G' + (t.goalIdx + 1), badgeColor: GOAL_COLORS[t.goalIdx % GOAL_COLORS.length], responsibility: t.responsibility, due: t.byWhen || '' }));
+    flatTasks.sort((a, b) => {
+      const aOngoing = !DUE_SORT[a.due], bOngoing = !DUE_SORT[b.due];
+      if (aOngoing && !bOngoing) return -1;
+      if (!aOngoing && bOngoing) return 1;
+      return (DUE_SORT[a.due] || 99) - (DUE_SORT[b.due] || 99);
+    });
+
+    const initial = person.charAt(0).toUpperCase();
+    const taskRows = flatTasks.map(t => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="flex-shrink:0;font-size:10px;font-weight:700;color:#fff;background:${t.badgeColor};border-radius:4px;padding:2px 6px;min-width:24px;text-align:center;">${t.badgeLabel}</span>
+        <span style="flex:1;font-size:13.5px;color:var(--text);">${esc(t.responsibility)}</span>
+        <span style="flex-shrink:0;font-size:12px;font-weight:600;color:var(--text-muted);">${esc(t.due || '—')}</span>
+      </div>`).join('');
+
+    return `<div class="conv-card" style="margin-top:0;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <div style="width:32px;height:32px;border-radius:8px;background:${pc};color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;">${initial}</div>
+        <div>
+          <strong style="font-size:15px;">${esc(person)}</strong>
+          <div style="font-size:12px;color:var(--text-muted);">${taskCount} responsibilit${taskCount === 1 ? 'y' : 'ies'}</div>
+        </div>
+      </div>
+      ${taskRows || '<p style="font-size:13px;color:var(--text-muted);font-style:italic;">No responsibilities yet.</p>'}
+    </div>`;
+  }).join('');
+}
+
+// ── CHECK-IN: DRAFT NOVEMBER AGENDA ────────────────────────────────────────
+// Mix of fixed items every team gets (revisit norms, confirm next
+// checkpoint) and data-driven items generated from this team's actual
+// goals, evidence due dates, and cross-goal responsibilities due around
+// November. Editable in place; persisted to localStorage per team so a
+// team's edits survive navigating away and back, but only pre-filled with
+// the generated draft the first time (never overwrites their edits).
+let novAgendaEdited = false;
+
+function initNovAgendaText() {
+  const textarea = document.getElementById('checkinNovAgendaText');
+  if (!textarea) return;
+  const teamName = localStorage.getItem('htsd_checkin_team') || '';
+  const savedKey = 'htsd_checkin_nov_agenda_' + teamName;
+  const saved = localStorage.getItem(savedKey);
+  if (saved) {
+    textarea.value = saved;
+    novAgendaEdited = true;
+  } else if (!novAgendaEdited) {
+    textarea.value = buildNovAgendaText();
+  }
+}
+
+function persistNovAgendaEdits() {
+  novAgendaEdited = true;
+  const textarea = document.getElementById('checkinNovAgendaText');
+  const teamName = localStorage.getItem('htsd_checkin_team') || '';
+  if (textarea) localStorage.setItem('htsd_checkin_nov_agenda_' + teamName, textarea.value);
+}
+
+function regenerateNovAgenda() {
+  const textarea = document.getElementById('checkinNovAgendaText');
+  if (!textarea) return;
+  textarea.value = buildNovAgendaText();
+  novAgendaEdited = true;
+  persistNovAgendaEdits();
+  showToast('Agenda regenerated from your current data.', 'success');
+}
+
+function buildNovAgendaText() {
+  const teamName = localStorage.getItem('htsd_checkin_team') || 'Your team';
+  const novDate = pmData?.checkpointDates?.Nov;
+  const janDate = pmData?.checkpointDates?.Jan;
+  const dateLine = novDate ? ` — ${novDate}` : '';
+
+  const lines = [];
+  lines.push(`${teamName} — November Check-In Agenda${dateLine}`);
+  lines.push('');
+  lines.push('1. Revisit team norms & cadence (5 min)');
+  lines.push('   Quick pulse check: is the meeting rhythm you set in September still working for everyone?');
+  lines.push('');
+
+  // Data-driven: evidence due by/around November, per goal
+  const novAndEarlier = new Set(['Aug','Sep','Oct','Nov']);
+  const evidenceDue = [];
+  goals.forEach((g, gi) => {
+    const label = g.goalNickname || g.teamGoal?.substring(0, 40) || `Goal ${gi + 1}`;
+    (g.evidenceItems || []).forEach(e => {
+      if (e.text && e.text.trim() && novAndEarlier.has(e.collectMonth)) {
+        evidenceDue.push(`   - ${label}: ${e.text.trim()}${e.collectMonth ? ' (' + e.collectMonth + ')' : ''}`);
+      }
+    });
+  });
+  let itemNum = 2;
+  lines.push(`${itemNum}. Review evidence collected so far (10 min)`);
+  if (evidenceDue.length) {
+    lines.push(...evidenceDue);
+  } else {
+    lines.push('   - No evidence marked for collection by November yet — check in on where each goal actually stands.');
+  }
+  lines.push('');
+  itemNum++;
+
+  // Data-driven: responsibilities due around November, cross-goal + per-goal
+  const respDue = [];
+  (pmData?.crossGoalRoles || []).forEach(r => {
+    if (r.name && r.responsibility && (r.cadence === 'Nov' || r.cadence === 'Ongoing' || r.cadence === 'Each checkpoint')) {
+      respDue.push(`   - ${r.name}: ${r.responsibility}${r.cadence === 'Nov' ? ' (due Nov)' : ' (' + r.cadence + ')'}`);
+    }
+  });
+  goals.forEach((g, gi) => {
+    const label = g.goalNickname || g.teamGoal?.substring(0, 40) || `Goal ${gi + 1}`;
+    (g.roles || []).forEach(r => {
+      if (r.name && r.responsibility && novAndEarlier.has(r.byWhen)) {
+        respDue.push(`   - ${r.name}: ${r.responsibility} (${label}${r.byWhen ? ', ' + r.byWhen : ''})`);
+      }
+    });
+  });
+  lines.push(`${itemNum}. Check status on responsibilities due (10 min)`);
+  if (respDue.length) {
+    lines.push(...respDue);
+  } else {
+    lines.push('   - No responsibilities were marked due by November — confirm nothing fell through the cracks.');
+  }
+  lines.push('');
+  itemNum++;
+
+  lines.push(`${itemNum}. Adjust supports or redistribute workload as needed (10 min)`);
+  lines.push('   Is anyone overloaded? Does a timeline need to shift?');
+  lines.push('');
+  itemNum++;
+
+  lines.push(`${itemNum}. Confirm readiness for the Learner-Centered Pulse Survey in December (5 min)`);
+  lines.push('');
+  itemNum++;
+
+  lines.push(`${itemNum}. Confirm the January checkpoint date${janDate ? ` (currently set: ${janDate})` : ' (not yet set — lock this in today)'}`);
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+// Builds a minimal, valid .docx (Word Open XML) using JSZip — no external
+// docx-generation library is available on our CDN allowlist, so this hand-
+// builds the handful of required XML parts. Each line of the agenda text
+// becomes its own paragraph; the title line is bolded.
+async function exportNovAgendaDocx() {
+  const textarea = document.getElementById('checkinNovAgendaText');
+  const text = textarea ? textarea.value : '';
+  const teamName = localStorage.getItem('htsd_checkin_team') || 'Team';
+  const lines = text.split('\n');
+
+  const escXml = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const paragraphs = lines.map((line, i) => {
+    const isTitle = i === 0;
+    const runProps = isTitle ? '<w:rPr><w:b/><w:sz w:val="28"/></w:rPr>' : '<w:rPr><w:sz w:val="22"/></w:rPr>';
+    const safeLine = escXml(line) || ' ';
+    return `<w:p>${isTitle ? '' : ''}<w:r>${runProps}<w:t xml:space="preserve">${safeLine}</w:t></w:r></w:p>`;
+  }).join('');
+
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    ${paragraphs}
+    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>
+  </w:body>
+</w:document>`;
+
+  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+
+  const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+  const docRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`;
+
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', contentTypesXml);
+  zip.folder('_rels').file('.rels', rootRelsXml);
+  const wordFolder = zip.folder('word');
+  wordFolder.file('document.xml', documentXml);
+  wordFolder.folder('_rels').file('document.xml.rels', docRelsXml);
+
+  const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${teamName.replace(/[^\w\- ]/g,'').trim() || 'Team'} - November Check-In Agenda.docx`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Agenda downloaded.', 'success');
+}
+
+// ----------------------------------------------------------
 // REMOVE / CLEAR LINK
 // ----------------------------------------------------------
 function showConfirmModal(titleText, bodyText, confirmLabel, onConfirm) {
@@ -1362,6 +1846,18 @@ function handleRemoveOrClear() {
 // PORTFOLIO REVIEW
 // ----------------------------------------------------------
 function renderPortfolioReview() {
+  const isCheckin = document.body.classList.contains('checkin-mode');
+  const summerShell = document.getElementById('portfolioSummerShell');
+  const closeoutShell = document.getElementById('checkinCloseoutShell');
+  if (isCheckin) {
+    if (summerShell) summerShell.style.display = 'none';
+    if (closeoutShell) closeoutShell.style.display = '';
+    renderCheckinCloseout();
+    return;
+  }
+  if (summerShell) summerShell.style.display = '';
+  if (closeoutShell) closeoutShell.style.display = 'none';
+
   const allGoals = goals;
   document.getElementById('statGoals').textContent = allGoals.length;
   document.getElementById('statEvidence').textContent = allGoals.reduce((s,g) => s + (g.evidenceItems||[]).length, 0);
@@ -1614,14 +2110,24 @@ function persistPmData() {
 
 const MONTH_SORT = {Sum:0,Aug:1,Sep:2,Oct:3,Nov:4,Dec:5,Jan:6,Feb:7,Mar:8,Apr:9,May:10,Jun:11};
 
+// pmData (Cross-Goal Responsibilities + Meeting Cadence) is shown in two
+// places now: the check-in Kickoff step (pmRolesTbodyKickoff/pmCadenceTbodyKickoff)
+// and the original Project Management phase (pmRolesTbody/pmCadenceTbody).
+// Both read/write the exact same pmData object, so every render pass updates
+// whichever of these tbodies actually exist in the DOM right now — usually
+// just one, but never more than that at a time in practice.
+const PM_ROLES_TBODY_IDS = ['pmRolesTbodyKickoff', 'pmRolesTbody', 'pmRolesTbodyCloseout'];
+const PM_CADENCE_TBODY_IDS = ['pmCadenceTbodyKickoff', 'pmCadenceTbody', 'pmCadenceTbodyCloseout'];
+
 function renderPmView() {
   renderPmRoles();
   renderPmCadence();
 }
 
 function renderPmRoles() {
-  const tbody = document.getElementById('pmRolesTbody');
-  if (!tbody || !pmData) return;
+  if (!pmData) return;
+  const tbodies = PM_ROLES_TBODY_IDS.map(id => document.getElementById(id)).filter(Boolean);
+  if (!tbodies.length) return;
   // Sort: specific months first (by month order), then ongoing/each checkpoint last
   const CADENCE_SORT = {Aug:1,Sep:2,Oct:3,Nov:4,Dec:5,Jan:6,Feb:7,Mar:8,Apr:9,May:10,Jun:11};
   const sorted = [...pmData.crossGoalRoles].sort((a,b) => {
@@ -1629,29 +2135,29 @@ function renderPmRoles() {
     return av - bv;
   });
   pmData.crossGoalRoles = sorted;
-  tbody.innerHTML = '';
-  sorted.forEach((row, i) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
+  const rowsHtml = sorted.map((row, i) => `
+    <tr>
       <td><input type="text" list="memberDatalist" class="cadence-owner-input" placeholder="Name…" value="${esc(row.name)}" oninput="pmUpdateRole(${i},'name',this.value)" /></td>
       <td class="pm-resp">${esc(row.responsibility)}</td>
       <td><input type="text" class="cadence-owner-input" placeholder="e.g. Ongoing, Oct" value="${esc(row.cadence||''  )}" oninput="pmUpdateRole(${i},'cadence',this.value)" style="min-width:70px" /></td>
       <td><button class="pm-del-btn" onclick="pmDeleteRole(${i})" title="Remove">−</button></td>
-    `;
-    tbody.appendChild(tr);
-  });
+    </tr>
+  `).join('');
+  tbodies.forEach(tbody => { tbody.innerHTML = rowsHtml; });
 }
 
 function renderPmCadence() {
-  const tbody = document.getElementById('pmCadenceTbody');
-  if (!tbody || !pmData) return;
-  tbody.innerHTML = PM_CHECKPOINT_MONTHS.map(mo => `
+  if (!pmData) return;
+  const tbodies = PM_CADENCE_TBODY_IDS.map(id => document.getElementById(id)).filter(Boolean);
+  if (!tbodies.length) return;
+  const rowsHtml = PM_CHECKPOINT_MONTHS.map(mo => `
     <tr>
       <td><span class="cadence-pill">${mo}</span></td>
       <td class="cadence-focus">${PM_CHECKPOINT_FOCUS[mo]}</td>
       <td><input type="date" class="cadence-date-input" value="${esc(pmData.checkpointDates[mo]||'')}" oninput="pmUpdateCheckpoint('${mo}',this.value)" /></td>
     </tr>
   `).join('');
+  tbodies.forEach(tbody => { tbody.innerHTML = rowsHtml; });
 }
 
 function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -1660,6 +2166,19 @@ function pmUpdateRole(idx, field, val) {
   if (!pmData || idx >= pmData.crossGoalRoles.length) return;
   pmData.crossGoalRoles[idx][field] = val;
   persistPmData();
+  // Keep every rendered copy of this table in sync as the team types —
+  // e.g. if a name is entered on the Kickoff table, the close-out's PM
+  // table (if also present later) reflects it without a manual refresh.
+  PM_ROLES_TBODY_IDS.forEach(id => {
+    const tbody = document.getElementById(id);
+    if (!tbody) return;
+    const rows = tbody.querySelectorAll('tr');
+    const row = rows[idx];
+    if (!row) return;
+    const inputs = row.querySelectorAll('input');
+    if (field === 'name' && inputs[0] && inputs[0].value !== val) inputs[0].value = val;
+    if (field === 'cadence' && inputs[1] && inputs[1].value !== val) inputs[1].value = val;
+  });
 }
 
 function pmDeleteRole(idx) {
@@ -1669,13 +2188,13 @@ function pmDeleteRole(idx) {
   renderPmRoles();
 }
 
-function pmAddRow() {
+function pmAddRow(focusTbodyId) {
   if (!pmData) return;
   pmData.crossGoalRoles.push({name:'', responsibility:'', cadence:''});
   persistPmData();
   renderPmRoles();
-  // Focus the last name input
-  const tbody = document.getElementById('pmRolesTbody');
+  // Focus the last name input in whichever table triggered the add
+  const tbody = document.getElementById(focusTbodyId || 'pmRolesTbody');
   if (tbody) {
     const inputs = tbody.querySelectorAll('input');
     if (inputs.length) inputs[inputs.length-3].focus();
@@ -1905,6 +2424,18 @@ function startCheckin(teamName) {
 
   document.getElementById('launchTeamName').value = teamName;
   document.getElementById('launchSchoolYear').value = '2026–27';
+  // Pre-fill team member names from the confirmed fall roster whenever this
+  // is a fresh entry into this team's check-in (mirrors the `alreadyLoaded`
+  // check above) — never overwrite names an already-in-progress team has
+  // edited (e.g. a "Cover for a Colleague" swap, or someone added mid-year).
+  // Using "field is empty" alone would be wrong here: switching from one
+  // team straight to another leaves the previous team's names sitting in
+  // the field, which would then block the new team's roster from loading.
+  const membersField = document.getElementById('launchTeamMembers');
+  const roster = TEAM_ROSTERS[teamName];
+  if (membersField && !alreadyLoaded && roster) {
+    membersField.value = roster.members.join(', ');
+  }
   saveLaunchIdentity();
   localStorage.setItem('htsd_has_launched', 'true');
   // Paint the DOM with goal 0's data so the underlying full-edit view (and
@@ -1912,8 +2443,17 @@ function startCheckin(teamName) {
   // check-in mode lands on the simple summary view instead.
   renderGoalTabs();
   restoreFormData(goals[activeGoalIdx]);
+  updateMemberDropdowns();
   switchPhase('goals');
-  showCheckinSummary();
+  // Kickoff/Norms is a once-per-check-in-session framing step — a team that
+  // has already seen it this session (e.g. navigating back from a later
+  // step) goes straight back to their goal summary instead of replaying it.
+  if (!sessionStorage.getItem('htsd_checkin_kickoff_shown_' + teamName)) {
+    sessionStorage.setItem('htsd_checkin_kickoff_shown_' + teamName, 'true');
+    showCheckinKickoff(teamName);
+  } else {
+    showCheckinSummary();
+  }
   startSheetAutosave();
 }
 
@@ -1929,11 +2469,47 @@ function goalIsCheckinReady(g) {
 // All check-in step view containers, so switching steps is always a clean
 // hide-everything-then-show-one operation instead of tracking pairs.
 const CHECKIN_VIEW_IDS = [
-  'checkinSummaryView', 'checkinGoalTextEditorView',
+  'checkinKickoffView', 'checkinSummaryView', 'checkinGoalTextEditorView',
   'checkinEvidenceView', 'checkinRolesView'
 ];
 function hideAllCheckinViews() {
   CHECKIN_VIEW_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+}
+
+// STEP 0: Kickoff/Norms — shown once per check-in session, before any
+// per-goal work. Frames the whole year (not just today) and lets the team
+// set/confirm their cross-goal responsibilities and meeting cadence before
+// they dig into individual goals.
+function showCheckinKickoff(teamName) {
+  document.getElementById('goalNav').style.display = 'none';
+  document.getElementById('fullEditLayout').style.display = 'none';
+  document.getElementById('goalsNudge').classList.remove('show');
+  hideAllCheckinViews();
+  document.getElementById('checkinKickoffView').style.display = '';
+  renderCheckinKickoffFraming(teamName);
+  renderPmView();
+}
+
+function renderCheckinKickoffFraming(teamName) {
+  const roster = TEAM_ROSTERS[teamName];
+  const greetingEl = document.getElementById('checkinKickoffGreeting');
+  const framingEl = document.getElementById('checkinKickoffFraming');
+  if (greetingEl) {
+    greetingEl.textContent = teamName ? `Welcome back, ${teamName.replace(/\s*\([^)]*\)/, '')}.` : 'Welcome back, team.';
+  }
+  if (framingEl) {
+    const leadLine = roster?.lead ? ` — ${roster.lead}` : '';
+    const memberCount = roster?.members?.length || 0;
+    framingEl.textContent = memberCount
+      ? `You and your ${memberCount}-person design team${leadLine} are picking up the work you started last spring. Today isn't a fresh start — it's a checkpoint in a year-long rhythm.`
+      : `You're picking up the work your design team started last spring. Today isn't a fresh start — it's a checkpoint in a year-long rhythm.`;
+  }
+}
+
+// From Kickoff, always land on the goal summary next (not back into Kickoff
+// on a later revisit — see the sessionStorage guard in startCheckin()).
+function proceedFromCheckinKickoff() {
+  showCheckinSummary();
 }
 
 function showCheckinSummary() {
@@ -2525,6 +3101,34 @@ const SPRING_GOALS = {
       ]
     }
   ]
+};
+
+// Confirmed Sept 29-30, 2026 fall design-team rosters (from Brittany's team
+// roster doc). Used to personalize the check-in Kickoff greeting and to
+// pre-fill the team-member name suggestions, so teams see their own names
+// rather than a generic "enter team member names" prompt. Keys match
+// SPRING_GOALS exactly so the same team-name selection drives both.
+const TEAM_ROSTERS = {
+  "Hampton High School (HHS)": {
+    members: ["Alison McBee","Greg Adamczyk","Hannah Krasnow","Andrew Halter","Shannon Roos","Jamie Pugliese","Brian Lego","Heidi Sasson","Amy Faith"],
+    lead: "Dr. Imbarlina"
+  },
+  "Central Elementary": {
+    members: ["Jen Morgan","Kim Leonard","Sydney Funtal","Mary Fitzpatrick","Joell McMonigal","Shanna Struble","Beth Casey","Francesca Deiuliis","Melissa Evans"],
+    lead: "Dr. Kern"
+  },
+  "Hampton Middle School (HMS)": {
+    members: ["Derek Nichols","Michele Hurst","Mary West","Jesse Belitz","Lisa Milsom","Melissa Survinski","Stephen Adametz","Jessie Patouillet","Mariajose Figueroa"],
+    lead: "Mr. Rice"
+  },
+  "Wyland Elementary": {
+    members: ["Brittnee Stepanik","Wendi Hunter","Megan Walker","Stephanie Moser","Shanna Struble"],
+    lead: "Dr. Silbaugh"
+  },
+  "Poff Elementary": {
+    members: ["Courtenay Garrett","Amy Rein","Dina Dunmire","Erin Prosser"],
+    lead: "Dr. Cable"
+  }
 };
 
 const OUTCOMES = {
