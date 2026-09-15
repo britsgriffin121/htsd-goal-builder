@@ -1109,6 +1109,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
         </div>
       </div>
       <div id="pmCadenceTbodyCloseout"></div>
+      <button class="btn-secondary" style="margin-top:10px;" onclick="showCheckinKickoff(localStorage.getItem('htsd_checkin_team'), 'portfolio')">← Edit Cross-Goal Roles &amp; Cadence</button>
     </div>
 
     <hr class="pm-divider">
@@ -2616,7 +2617,21 @@ function hideAllCheckinViews() {
 // per-goal work. Frames the whole year (not just today) and lets the team
 // set/confirm their cross-goal responsibilities and meeting cadence before
 // they dig into individual goals.
-function showCheckinKickoff(teamName) {
+// Tracks whether Kickoff was opened from the Team Project Plan close-out
+// (via the "Edit Cross-Goal Roles & Cadence" link) so the Continue button
+// can return there instead of always dropping back to Review Goals — the
+// team shouldn't lose their place in the project plan just to fix a name
+// or date in Cross-Goal Responsibilities.
+let checkinKickoffReturnTo = null;
+
+function showCheckinKickoff(teamName, returnTo) {
+  checkinKickoffReturnTo = returnTo || null;
+  // checkinKickoffView physically lives inside phaseView-goals — if we're
+  // being opened from another phase (e.g. the "Edit Cross-Goal Roles &
+  // Cadence" link on the Team Project Plan close-out), that ancestor is
+  // still display:none until we make 'goals' the active phase, or the view
+  // we're about to show stays invisible even though its own display is set.
+  if (currentPhase !== 'goals') switchPhase('goals');
   document.getElementById('goalNav').style.display = 'none';
   document.getElementById('fullEditLayout').style.display = 'none';
   document.getElementById('goalsNudge').classList.remove('show');
@@ -2642,10 +2657,19 @@ function renderCheckinKickoffFraming(teamName) {
   }
 }
 
-// From Kickoff, always land on the goal summary next (not back into Kickoff
-// on a later revisit — see the sessionStorage guard in startCheckin()).
+// From Kickoff, land on the goal summary by default (first-time flow, or a
+// later revisit via startCheckin() — see its sessionStorage guard). But if
+// Kickoff was opened FROM the Team Project Plan close-out to edit Cross-Goal
+// Responsibilities/Cadence, Continue should return there instead, so the
+// team doesn't lose their place in the plan just to fix a name or date.
 function proceedFromCheckinKickoff() {
-  showCheckinSummary();
+  const returnTo = checkinKickoffReturnTo;
+  checkinKickoffReturnTo = null;
+  if (returnTo === 'portfolio') {
+    switchPhase('portfolio');
+  } else {
+    showCheckinSummary();
+  }
 }
 
 function showCheckinSummary() {
