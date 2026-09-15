@@ -197,6 +197,10 @@ body.checkin-mode .reflection-nudge{display:block}
 .cadence-node-label:hover .cadence-info-dot{background:var(--hampton-blue)}
 .cadence-node-tooltip{visibility:hidden;opacity:0;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#1B2733;color:#fff;font-size:12px;font-weight:500;line-height:1.4;text-align:left;padding:8px 10px;border-radius:6px;width:200px;box-shadow:0 4px 14px rgba(0,0,0,0.2);z-index:20;transition:opacity 0.12s ease;pointer-events:none}
 .cadence-node-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#1B2733}
+.cadence-node-tooltip-left{left:0;transform:none}
+.cadence-node-tooltip-left::after{left:16px;transform:none}
+.cadence-node-tooltip-right{left:auto;right:0;transform:none}
+.cadence-node-tooltip-right::after{left:auto;right:16px;transform:none}
 .cadence-node-label:hover .cadence-node-tooltip{visibility:visible;opacity:1}
 .pm-divider{border:none;border-top:1px solid var(--border);margin:24px 0}
 @media (max-width:760px){.goal-nav{padding:10px 16px;align-items:flex-start;flex-direction:column}.goal-nav-tabs{width:100%}}
@@ -645,9 +649,9 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
       <table class="pm-roles-table" id="pmRolesTableKickoff">
         <thead>
           <tr>
-            <th style="width:22%">Team Member</th>
+            <th style="width:18%">Team Member</th>
             <th>Responsibility</th>
-            <th style="width:16%">Cadence</th>
+            <th style="width:26%">Cadence</th>
             <th style="width:4%"></th>
           </tr>
         </thead>
@@ -1006,9 +1010,9 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
     <table class="pm-roles-table" id="pmRolesTable">
       <thead>
         <tr>
-          <th style="width:22%">Team Member</th>
+          <th style="width:18%">Team Member</th>
           <th>Responsibility</th>
-          <th style="width:16%">Cadence</th>
+          <th style="width:26%">Cadence</th>
           <th style="width:4%"></th>
         </tr>
       </thead>
@@ -1111,24 +1115,13 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 
     <div class="section">
       <div class="section-header">
-        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">PLAN</div>
+        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">✓</div>
         <div>
-          <div class="section-title">Cross-Goal Responsibilities</div>
-          <div class="section-desc">Confirm or adjust before you go — this is what keeps the team running across the year.</div>
+          <div class="section-title">Tasks Due Before Your November Meeting</div>
+          <div class="section-desc">Everything ongoing or due by your next check-in — this is your to-do list for the next two months.</div>
         </div>
       </div>
-      <table class="pm-roles-table" id="pmRolesTableCloseout">
-        <thead>
-          <tr>
-            <th style="width:22%">Team Member</th>
-            <th>Responsibility</th>
-            <th style="width:16%">Cadence</th>
-            <th style="width:4%"></th>
-          </tr>
-        </thead>
-        <tbody id="pmRolesTbodyCloseout"></tbody>
-      </table>
-      <button class="pm-add-row-btn" onclick="pmAddRow('pmRolesTbodyCloseout')">＋ Add Responsibility</button>
+      <div id="checkinNovDueTasks"></div>
     </div>
 
     <hr class="pm-divider">
@@ -1480,9 +1473,65 @@ function updateNickname() {
 // across all goals plus any cross-goal responsibilities assigned to them.
 function renderCheckinCloseout() {
   renderPmView();
+  renderCheckinNovDueTasks();
   renderCheckinCrossGoalTimeline();
   renderCheckinPersonTaskLists();
   initNovAgendaText();
+}
+
+// Due-by-November filter: a task counts as "due before the next meeting" if
+// it's Ongoing/Each checkpoint (always active) or its due month falls at or
+// before Nov in the checkpoint sequence. This intentionally excludes tasks
+// due later in the year (Jan/Mar/May) so this list stays a real to-do list
+// for the next two months, not a repeat of the full responsibilities table.
+const NOV_DUE_MONTHS = new Set(['Sep', 'Oct', 'Nov']);
+function isDueByNovember(due) {
+  if (!due) return false;
+  if (due === 'Ongoing' || due === 'Each checkpoint') return true;
+  return NOV_DUE_MONTHS.has(due);
+}
+
+function renderCheckinNovDueTasks() {
+  const container = document.getElementById('checkinNovDueTasks');
+  if (!container) return;
+
+  const GOAL_COLORS = ['#1B4FA8', '#E84D98', '#19D3C5', '#888888', '#2C3E50'];
+  const flatTasks = [];
+
+  (pmData?.crossGoalRoles || []).forEach(r => {
+    if (!r.responsibility || !isDueByNovember(r.cadence)) return;
+    flatTasks.push({
+      badgeLabel: 'ALL', badgeColor: '#333333',
+      responsibility: r.responsibility, who: r.name || 'Unassigned', due: r.cadence,
+    });
+  });
+  goals.forEach((g, gi) => {
+    (g.roles || []).forEach(r => {
+      if (!r.responsibility || !isDueByNovember(r.byWhen)) return;
+      flatTasks.push({
+        badgeLabel: 'G' + (gi + 1), badgeColor: GOAL_COLORS[gi % GOAL_COLORS.length],
+        responsibility: r.responsibility, who: r.name || 'Unassigned', due: r.byWhen,
+      });
+    });
+  });
+
+  if (!flatTasks.length) {
+    container.innerHTML = '<p style="font-size:13px;color:var(--text-muted);font-style:italic;">Add cross-goal or per-goal responsibilities to see what\'s due before November here.</p>';
+    return;
+  }
+
+  const DUE_SORT = { Ongoing: 0, 'Each checkpoint': 0, Sep: 1, Oct: 2, Nov: 3 };
+  flatTasks.sort((a, b) => (DUE_SORT[a.due] ?? 9) - (DUE_SORT[b.due] ?? 9));
+
+  const rows = flatTasks.map(t => `
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
+      <span style="flex-shrink:0;font-size:10px;font-weight:700;color:#fff;background:${t.badgeColor};border-radius:4px;padding:2px 6px;min-width:24px;text-align:center;">${t.badgeLabel}</span>
+      <span style="flex:1;font-size:13.5px;color:var(--text);">${esc(t.responsibility)}</span>
+      <span style="flex-shrink:0;font-size:12.5px;color:var(--text);font-weight:600;">${esc(t.who)}</span>
+      <span style="flex-shrink:0;font-size:12px;font-weight:600;color:var(--text-muted);min-width:50px;text-align:right;">${esc(t.due)}</span>
+    </div>`).join('');
+
+  container.innerHTML = `<div class="conv-card" style="margin-top:0;">${rows}</div>`;
 }
 
 function renderCheckinCrossGoalTimeline() {
@@ -2115,7 +2164,11 @@ const MONTH_SORT = {Sum:0,Aug:1,Sep:2,Oct:3,Nov:4,Dec:5,Jan:6,Feb:7,Mar:8,Apr:9,
 // Both read/write the exact same pmData object, so every render pass updates
 // whichever of these tbodies actually exist in the DOM right now — usually
 // just one, but never more than that at a time in practice.
-const PM_ROLES_TBODY_IDS = ['pmRolesTbodyKickoff', 'pmRolesTbody', 'pmRolesTbodyCloseout'];
+// pmRolesTbodyCloseout was removed: the close-out no longer re-shows the
+// editable Cross-Goal Responsibilities table (that's confirmed once at
+// Kickoff) — it shows a filtered "what's due by November" list instead,
+// rendered by renderCheckinNovDueTasks().
+const PM_ROLES_TBODY_IDS = ['pmRolesTbodyKickoff', 'pmRolesTbody'];
 const PM_CADENCE_TBODY_IDS = ['pmCadenceTbodyKickoff', 'pmCadenceTbody', 'pmCadenceTbodyCloseout'];
 
 function renderPmView() {
@@ -2129,10 +2182,10 @@ function renderPmView() {
 // "October", and "each Oct" could all show up for the same intent).
 // Each option pairs the stored value with a short plain-language label.
 const CADENCE_OPTIONS = [
-  { value: 'Ongoing', label: 'Ongoing — happens continuously' },
-  { value: 'Each checkpoint', label: 'Each checkpoint — every Sep/Nov/Jan/Mar/May meeting' },
-  ...PM_CHECKPOINT_MONTHS.map(mo => ({ value: mo, label: `${mo} — at that checkpoint` })),
-  { value: 'Dec', label: 'Dec — one-time, December' },
+  { value: 'Ongoing', label: 'Ongoing' },
+  { value: 'Each checkpoint', label: 'Each checkpoint' },
+  ...PM_CHECKPOINT_MONTHS.map(mo => ({ value: mo, label: `At ${mo} checkpoint` })),
+  { value: 'Dec', label: 'One-time, Dec' },
 ];
 
 function cadenceOptionsHtml(selected) {
@@ -2160,7 +2213,7 @@ function renderPmRoles() {
     <tr>
       <td><input type="text" list="memberDatalist" class="cadence-owner-input" placeholder="Name…" value="${esc(row.name)}" oninput="pmUpdateRole(${i},'name',this.value)" /></td>
       <td class="pm-resp">${esc(row.responsibility)}</td>
-      <td><select class="cadence-owner-input pm-cadence-select" onchange="pmUpdateRole(${i},'cadence',this.value)" style="min-width:110px">
+      <td><select class="cadence-owner-input pm-cadence-select" onchange="pmUpdateRole(${i},'cadence',this.value)" style="width:100%;min-width:120px">
         <option value=""${row.cadence ? '' : ' selected'}>Choose…</option>
         ${cadenceOptionsHtml(row.cadence)}
       </select></td>
@@ -2183,20 +2236,28 @@ function renderPmCadence() {
   const nodesHtml = PM_CHECKPOINT_MONTHS.map((mo, i) => {
     const isLast = i === nodeCount - 1;
     const dateVal = pmData.checkpointDates[mo] || '';
+    // Edge nodes' tooltips get cut off by the row's own bounds if centered
+    // under the node (left:50% + translateX(-50%)) — align the first node's
+    // tooltip to its left edge and the last node's to its right edge so the
+    // full card stays on-screen instead of spilling past the row.
+    const tipAlignClass = i === 0 ? 'cadence-node-tooltip-left' : (isLast ? 'cadence-node-tooltip-right' : '');
     return `
       <div style="flex:1;min-width:120px;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;">
         ${!isLast ? `<div style="position:absolute;top:15px;left:50%;width:100%;height:3px;background:var(--border-strong);z-index:0;"></div>` : ''}
         <div style="width:32px;height:32px;border-radius:50%;background:var(--hampton-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;z-index:1;position:relative;">${mo}</div>
         <div class="cadence-node-label" style="font-size:12.5px;font-weight:600;color:var(--text);margin-top:8px;line-height:1.3;">
           <span>${esc(PM_CHECKPOINT_SHORT[mo] || mo)}</span><span class="cadence-info-dot">i</span>
-          <span class="cadence-node-tooltip">${esc(PM_CHECKPOINT_FOCUS[mo])}</span>
+          <span class="cadence-node-tooltip ${tipAlignClass}">${esc(PM_CHECKPOINT_FOCUS[mo])}</span>
         </div>
         <input type="date" class="cadence-date-input" value="${esc(dateVal)}" oninput="pmUpdateCheckpoint('${mo}',this.value)" style="margin-top:8px;width:100%;max-width:140px;font-size:12.5px;" />
       </div>`;
   }).join('');
 
-  const html = `<div style="display:flex;align-items:flex-start;gap:4px;padding:6px 4px 2px;overflow-x:auto;">${nodesHtml}</div>`;
-  containers.forEach(container => { container.innerHTML = html; });
+  // Give the row real top padding (not just visual spacing) so the tooltip,
+  // which pops up ABOVE the node, has room to render without being clipped
+  // by the row's own top edge or an ancestor's overflow box.
+  const html = `<div style="display:flex;align-items:flex-start;gap:4px;padding:56px 4px 2px;margin-top:-50px;overflow:visible;">${nodesHtml}</div>`;
+  containers.forEach(container => { container.innerHTML = html; container.style.overflow = 'visible'; });
 }
 
 function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
