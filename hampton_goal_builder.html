@@ -2113,8 +2113,23 @@ const PM_CHECKPOINT_SHORT = {
 
 let pmData = null;
 
+// pmData (Cross-Goal Responsibilities + Meeting Cadence) must be scoped per
+// SCHOOL TEAM in check-in mode — otherwise a name typed in while working on
+// one team's cross-goal roles (e.g. "Dr. Silbaugh" for Wyland) bleeds into
+// every other team's page too, since they'd all be reading/writing the same
+// single localStorage key. The Summer full-planner flow is always one team
+// per browser/session by design, so it keeps the original unscoped key for
+// backward compatibility with existing saved data.
+function pmDataStorageKey() {
+  if (document.body.classList.contains('checkin-mode')) {
+    const teamName = localStorage.getItem('htsd_checkin_team') || '';
+    if (teamName) return 'htsd_pm_v1__' + teamName;
+  }
+  return 'htsd_pm_v1';
+}
+
 function initPmData() {
-  const saved = localStorage.getItem('htsd_pm_v1');
+  const saved = localStorage.getItem(pmDataStorageKey());
   if (saved) {
     try { pmData = JSON.parse(saved); } catch(e) {}
   }
@@ -2151,7 +2166,7 @@ function initPmData() {
 }
 
 function persistPmData() {
-  if (pmData) localStorage.setItem('htsd_pm_v1', JSON.stringify(pmData));
+  if (pmData) localStorage.setItem(pmDataStorageKey(), JSON.stringify(pmData));
 }
 
 // ── Team PM View rendering & interaction ──────────────────────────────────
@@ -2503,6 +2518,15 @@ function startCheckin(teamName) {
   const springGoals = SPRING_GOALS[teamName] || [];
   document.body.classList.add('checkin-mode');
   localStorage.setItem('htsd_checkin_team', teamName);
+
+  // Cross-Goal Responsibilities + Meeting Cadence must reload for THIS team
+  // now that htsd_checkin_team points at it — pmDataStorageKey() reads that
+  // value, so this has to run after the setItem above. Without this,
+  // whatever team's pmData happened to already be in memory (e.g. a name
+  // typed in for the previous team pulled up) would keep showing on every
+  // other team's page instead of that team's own saved cross-goal roles.
+  pmData = null;
+  initPmData();
 
   // Build real goal objects from the spring snapshot, only if this team's
   // goals aren't already loaded (so re-entering check-in doesn't duplicate).
