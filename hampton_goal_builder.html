@@ -336,6 +336,8 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 .ev-benchmark-input{flex:1;border:none;border-bottom:1.5px solid rgba(45,125,70,0.3);padding:2px 4px;font-size:14.5px;color:var(--text);background:transparent;font-family:'DM Sans',sans-serif;outline:none}
 .ev-benchmark-input:focus{border-bottom-color:var(--success)}
 .ev-benchmark-input::placeholder{color:rgba(45,125,70,0.5);font-style:italic}
+.ev-collect-month{border:none;border-bottom:1.5px solid rgba(45,125,70,0.3);padding:2px 4px;font-size:14px;color:var(--text);background:transparent;font-family:'DM Sans',sans-serif;outline:none}
+.ev-collect-month:focus{border-bottom-color:var(--success)}
 .ev-add-row{display:flex;gap:8px;margin-top:4px}
 .timeline-vis{margin:11px 0;padding:12px;background:var(--surface-2);border-radius:var(--radius);overflow-x:auto}
 .timeline-track{display:flex;align-items:flex-start;min-width:380px;padding:6px 0 2px}
@@ -633,40 +635,13 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- STEP 2a: MILESTONES (per goal)                                    -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
-<div id="checkinMilestonesView" style="display:none;">
-  <div class="pm-phase-padding" style="max-width:760px;margin:0 auto;">
-    <button class="btn-secondary" style="margin-bottom:14px;" onclick="backToCheckinSummary()">← Back to your goals</button>
-    <div class="hero-eyebrow" id="checkinStepGoalLabel" style="margin-bottom:4px;"></div>
-
-    <div class="conv-card blue" style="margin-bottom:18px;">
-      <span class="card-kicker">Your goal</span>
-      <p id="checkinGoalReadoutMs" style="font-size:16px;color:var(--text);line-height:1.5;margin-bottom:0;"></p>
-    </div>
-
-    <div class="section">
-      <div class="section-header"><div class="section-number">TIMELINE</div><div class="section-title">Timeline & Key Milestones</div></div>
-      <p class="section-desc">Answer these three questions about your goal — pick a month and describe what will happen. Each answer becomes one of your milestones. Add more below if you need them.</p>
-
-      <div id="checkinActiveWindow" style="display:none;font-size:12.5px;font-weight:700;color:var(--hampton-blue);background:var(--hampton-blue-light);border-radius:8px;padding:6px 12px;margin-bottom:14px;"></div>
-
-      <div id="checkinGuidingQuestions"></div>
-
-      <div id="checkinMilestoneList"></div>
-      <button class="add-milestone-btn" onclick="addCheckinMilestone()">+ Add Milestone</button>
-    </div>
-
-    <div style="display:flex;justify-content:flex-end;margin-top:20px;">
-      <button class="btn-primary" onclick="goToCheckinStep('evidence')">Next: Evidence →</button>
-    </div>
-  </div>
-</div>
-
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- STEP 2b: EVIDENCE (per goal)                                      -->
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div id="checkinEvidenceView" style="display:none;">
   <div class="pm-phase-padding" style="max-width:760px;margin:0 auto;">
-    <button class="btn-secondary" style="margin-bottom:14px;" onclick="goToCheckinStep('milestones')">← Back to milestones</button>
+    <button class="btn-secondary" style="margin-bottom:14px;" onclick="backToCheckinSummary()">← Back to your goals</button>
+    <div class="hero-eyebrow" id="checkinStepGoalLabel" style="margin-bottom:4px;"></div>
 
     <div class="conv-card blue" style="margin-bottom:18px;">
       <span class="card-kicker">Your goal</span>
@@ -1019,12 +994,12 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
     <div class="portfolio-stats">
       <div class="stat-card"><div class="stat-num" id="statGoals">0</div><div class="stat-label">Goals</div></div>
       <div class="stat-card"><div class="stat-num" id="statEvidence">0</div><div class="stat-label">Evidence Items</div></div>
-      <div class="stat-card"><div class="stat-num" id="statMilestones">0</div><div class="stat-label">Milestones</div></div>
+      <div class="stat-card"><div class="stat-num" id="statMilestones">0</div><div class="stat-label" id="statMilestonesLabel">Milestones</div></div>
       <div class="stat-card"><div class="stat-num" id="statOwners">0</div><div class="stat-label">People Assigned</div></div>
     </div>
     <div class="launch-grid">
       <div class="conv-card gold">
-        <span class="card-kicker">Milestone map</span>
+        <span class="card-kicker" id="milestoneHeatmapKicker">Milestone map</span>
         <h3>When is the work happening?</h3>
         <div id="milestoneHeatmap" style="margin-top:8px;"></div>
         <p style="font-size:13px;color:var(--text-muted);margin-top:10px;font-style:italic;">Have you checked these dates against your school calendar?</p>
@@ -1393,7 +1368,14 @@ function renderPortfolioReview() {
   const allGoals = goals;
   document.getElementById('statGoals').textContent = allGoals.length;
   document.getElementById('statEvidence').textContent = allGoals.reduce((s,g) => s + (g.evidenceItems||[]).length, 0);
-  document.getElementById('statMilestones').textContent = allGoals.reduce((s,g) => s + (g.milestones||[]).length, 0);
+  const statMsLabel = document.getElementById('statMilestonesLabel');
+  if (document.body.classList.contains('checkin-mode')) {
+    if (statMsLabel) statMsLabel.textContent = 'Evidence w/ Dates Set';
+    document.getElementById('statMilestones').textContent = allGoals.reduce((s,g) => s + (g.evidenceItems||[]).filter(e => e.collectMonth).length, 0);
+  } else {
+    if (statMsLabel) statMsLabel.textContent = 'Milestones';
+    document.getElementById('statMilestones').textContent = allGoals.reduce((s,g) => s + (g.milestones||[]).length, 0);
+  }
   const owners = new Set();
   allGoals.forEach(g => (g.roles||[]).forEach(r => { if (r.name) owners.add(r.name.trim()); }));
   document.getElementById('statOwners').textContent = owners.size;
@@ -1403,12 +1385,12 @@ function renderPortfolioReview() {
   list.innerHTML = allGoals.map((g, i) => {
     const score = _quickScore(g);
     const nick = g.goalNickname || g.teamGoal?.substring(0,28) || `Goal ${i+1}`;
-    const isOk = score === 7;
+    const isOk = score === _quickMaxScore();
     return `<div class="review-item">
       <div class="review-check${isOk ? '' : ' review-warn'}">${isOk ? '✓' : '!'}</div>
       <div>
         <strong style="font-size:13px;">${nick}</strong>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:1px;">${score}/7 checks complete${isOk ? '' : ' — <span style=\'color:var(--warn)\'>needs attention</span>'}</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:1px;">${score}/${_quickMaxScore()} checks complete${isOk ? '' : ' — <span style=\'color:var(--warn)\'>needs attention</span>'}</div>
       </div>
     </div>`;
   }).join('');
@@ -1417,11 +1399,12 @@ function renderPortfolioReview() {
 }
 
 function getPortfolioReadinessIssues() {
+  const maxScore = _quickMaxScore();
   return goals.map((g, i) => ({ goal: g, index: i, score: _quickScore(g) }))
-    .filter(item => item.score < 7)
+    .filter(item => item.score < maxScore)
     .map(item => {
       const nick = item.goal.goalNickname || `Goal ${item.index + 1}`;
-      return `${nick}: ${item.score}/7 readiness checks complete`;
+      return `${nick}: ${item.score}/${maxScore} readiness checks complete`;
     });
 }
 
@@ -1450,9 +1433,16 @@ function renderMilestoneHeatmap(allGoals) {
   const CHART_MONTHS = ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
   const GOAL_COLORS = ['#1B4FA8','#E84D98','#19D3C5','#888888','#2C3E50'];
 
+  // Check-in mode has no Milestones step anymore — its closest equivalent
+  // "when is work happening" signal is each evidence item's collection month.
+  const isCheckinMode = document.body.classList.contains('checkin-mode');
+  const kicker = document.getElementById('milestoneHeatmapKicker');
+  if (kicker) kicker.textContent = isCheckinMode ? 'Evidence collection map' : 'Milestone map';
   const data = allGoals.map(g =>
     CHART_MONTHS.reduce((acc, mo) => {
-      acc[mo] = (g.milestones||[]).filter(m => m.month === mo && m.text.trim()).length;
+      acc[mo] = isCheckinMode
+        ? (g.evidenceItems||[]).filter(e => e.collectMonth === mo && e.text && e.text.trim()).length
+        : (g.milestones||[]).filter(m => m.month === mo && m.text.trim()).length;
       return acc;
     }, {})
   );
@@ -1733,7 +1723,7 @@ function renderGoalTabs() {
     const isActive = i === activeGoalIdx;
     const canClose = goals.length > 1;
     const tabLabel = g.goalNickname || (g.teamGoal ? g.teamGoal.substring(0, 22) + (g.teamGoal.length > 22 ? '…' : '') : `Goal ${i+1}`);
-    const isComplete = _quickScore(g) === 7;
+    const isComplete = _quickScore(g) === _quickMaxScore();
     return `<button class="goal-tab${isActive?' active':''}${isComplete?' tab-complete':''}" onclick="switchToGoalView(${i})">
       <span class="goal-tab-num">${isComplete && !isActive ? '✓' : i+1}</span>
       <span class="goal-tab-label" title="${tabLabel}">${tabLabel}</span>
@@ -1943,7 +1933,7 @@ function goalIsCheckinReady(g) {
 // hide-everything-then-show-one operation instead of tracking pairs.
 const CHECKIN_VIEW_IDS = [
   'checkinSummaryView', 'checkinGoalTextEditorView',
-  'checkinMilestonesView', 'checkinEvidenceView', 'checkinRolesView'
+  'checkinEvidenceView', 'checkinRolesView'
 ];
 function hideAllCheckinViews() {
   CHECKIN_VIEW_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
@@ -1965,15 +1955,15 @@ function renderCheckinSummary() {
   if (skipBtn) skipBtn.style.display = goals.length ? '' : 'none';
   list.innerHTML = goals.map((g, i) => {
     const text = g.teamGoal || g.specificOutcome || `Goal ${i + 1} (not yet named)`;
-    const hasAnyMilestoneText = (g.milestones || []).some(m => m.text && m.text.trim());
+    const hasAnyEvidence = (g.evidenceItems || []).some(e => e.text && e.text.trim());
     return `<div class="checkin-goal-row" style="display:block;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;">
-        <span class="checkin-goal-row-text" style="flex:1;cursor:pointer;" title="Click to edit this goal's timeline & owners" onclick="startCheckinGoalWizard(${i})">${esc(text)}</span>
+        <span class="checkin-goal-row-text" style="flex:1;cursor:pointer;" title="Click to edit this goal's evidence & owners" onclick="startCheckinGoalWizard(${i})">${esc(text)}</span>
         ${goals.length > 1 ? `<button class="role-del-btn" style="width:auto;font-size:20px;flex-shrink:0;" title="Remove this goal" onclick="removeCheckinGoal(${i})">×</button>` : ''}
       </div>
       <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
         <button class="btn-secondary" style="padding:5px 10px;font-size:12.5px;" onclick="startEditCheckinGoalText(${i})">Edit wording</button>
-        ${!hasAnyMilestoneText ? `<span style="font-size:12px;color:var(--text-light);font-style:italic;">No milestones yet</span>` : ''}
+        ${!hasAnyEvidence ? `<span style="font-size:12px;color:var(--text-light);font-style:italic;">No evidence yet</span>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -1989,15 +1979,15 @@ function tryAdvanceToProjectPlan() {
   // summary list never touches the full-edit form's shared globals, so
   // there's nothing stale to flush and calling it would clobber real data.
   // Advancing is not blocked on completeness — teams decide for themselves
-  // when they're ready to move on — but if goals still have no milestones,
-  // the Project Plan step won't have much to work with, so we surface that
-  // rather than silently letting them arrive at an empty plan.
-  const emptyCount = goals.filter(g => !(g.milestones || []).some(m => m.text && m.text.trim())).length;
+  // when they're ready to move on — but if goals still have no evidence
+  // defined, the Project Plan step won't have much to work with, so we
+  // surface that rather than silently letting them arrive at an empty plan.
+  const emptyCount = goals.filter(g => !(g.evidenceItems || []).some(e => e.text && e.text.trim())).length;
   if (emptyCount > 0) {
     const goalWord = emptyCount === 1 ? 'goal doesn\'t' : 'goals don\'t';
     showConfirmModal(
-      'Continue without milestones?',
-      `${emptyCount} of ${goals.length} ${goalWord} have milestones yet. The Project Plan works best once each goal has a timeline. Continue anyway?`,
+      'Continue without evidence?',
+      `${emptyCount} of ${goals.length} ${goalWord} have evidence defined yet. The Project Plan works best once each goal has evidence in place. Continue anyway?`,
       'Continue anyway',
       () => {
         document.getElementById('confirmClearModal')?.classList.remove('open');
@@ -2057,18 +2047,17 @@ function saveCheckinGoalText() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// CHECK-IN: MILESTONES → EVIDENCE → ROLES WIZARD (per goal, one goal at a time)
+// CHECK-IN: EVIDENCE → ROLES WIZARD (per goal, one goal at a time)
 // ─────────────────────────────────────────────────────────────────────────────
-let checkinStep = 'milestones';
+let checkinStep = 'evidence';
 
 function startCheckinGoalWizard(idx) {
   activeGoalIdx = idx;
-  goToCheckinStep('milestones');
+  goToCheckinStep('evidence');
 }
 
 function goToCheckinStep(step) {
   // Persist whatever step we're leaving before painting the next one.
-  if (checkinStep === 'milestones') saveCheckinMilestonesStep();
   if (checkinStep === 'evidence') saveCheckinEvidenceStep();
   if (checkinStep === 'roles') saveCheckinRolesStep();
 
@@ -2079,13 +2068,9 @@ function goToCheckinStep(step) {
   const goalCount = goals.length;
   const posLabel = `Goal ${activeGoalIdx + 1} of ${goalCount}`;
 
-  if (step === 'milestones') {
-    document.getElementById('checkinMilestonesView').style.display = '';
-    document.getElementById('checkinStepGoalLabel').textContent = `Step 2 of 2 · Timeline & Owners · ${posLabel}`;
-    document.getElementById('checkinGoalReadoutMs').textContent = label;
-    renderCheckinMilestones();
-  } else if (step === 'evidence') {
+  if (step === 'evidence') {
     document.getElementById('checkinEvidenceView').style.display = '';
+    document.getElementById('checkinStepGoalLabel').textContent = `Step 2 of 2 · Evidence & Owners · ${posLabel}`;
     document.getElementById('checkinGoalReadoutEv').textContent = label;
     renderCheckinEvidence();
   } else if (step === 'roles') {
@@ -2107,7 +2092,6 @@ function finishCheckinGoal() {
 }
 
 function backToCheckinSummary() {
-  if (checkinStep === 'milestones') saveCheckinMilestonesStep();
   if (checkinStep === 'evidence') saveCheckinEvidenceStep();
   if (checkinStep === 'roles') saveCheckinRolesStep();
   hideAllCheckinViews();
@@ -2116,7 +2100,6 @@ function backToCheckinSummary() {
 }
 
 function openFullEditFromCheckin() {
-  if (checkinStep === 'milestones') saveCheckinMilestonesStep();
   if (checkinStep === 'evidence') saveCheckinEvidenceStep();
   if (checkinStep === 'roles') saveCheckinRolesStep();
   hideAllCheckinViews();
@@ -2126,32 +2109,8 @@ function openFullEditFromCheckin() {
   restoreFormData(goals[activeGoalIdx]);
 }
 
-// Each step saves only its own DOM — the three steps are never on screen
+// Each step saves only its own DOM — the two steps are never on screen
 // together now, so there's no single combined saveCheckinGoal() anymore.
-function saveCheckinMilestonesStep() {
-  const g = goals[activeGoalIdx];
-  if (!g) return;
-  // The 3 guiding questions live directly in g.milestones[0..2] already (kept
-  // in sync as-you-type by updateCheckinGuidingAnswer), including blanks —
-  // per the no-hard-validation decision, an unanswered question stays as a
-  // blank slot rather than being dropped, so the light "unanswered" cue on
-  // Review Goals has something to detect later. Only the extra rows below
-  // question 3 are read fresh from the DOM here.
-  const guidingCount = CHECKIN_GUIDING_QUESTIONS.length;
-  const guiding = (g.milestones || []).slice(0, guidingCount);
-  while (guiding.length < guidingCount) {
-    guiding.push({month: CHECKIN_GUIDING_QUESTIONS[guiding.length].defaultMonth, text: '', benchmark: ''});
-  }
-  const extraEls = document.querySelectorAll('#checkinMilestoneList .checkin-milestone-item');
-  const extras = Array.from(extraEls).map(el => ({
-    month: el.querySelector('select').value,
-    text: el.querySelector('input[type=text]').value,
-    benchmark: ''
-  })).filter(m => m.text.trim());
-  g.milestones = guiding.concat(extras);
-  persistGoals();
-}
-
 function saveCheckinEvidenceStep() {
   const g = goals[activeGoalIdx];
   if (!g) return;
@@ -2159,7 +2118,8 @@ function saveCheckinEvidenceStep() {
   g.evidenceItems = Array.from(evEls).map(el => ({
     text: el.dataset.text || '',
     tier: parseInt(el.dataset.tier) || 0,
-    benchmark: el.querySelector('.ev-benchmark-input')?.value || ''
+    benchmark: el.querySelector('.ev-benchmark-input')?.value || '',
+    collectMonth: el.querySelector('.ev-collect-month')?.value || ''
   })).filter(e => e.text.trim());
   persistGoals();
 }
@@ -2179,8 +2139,7 @@ function saveCheckinRolesStep() {
 // inline edits (oninput handlers) to persist as-you-type within whichever
 // step is currently open.
 function saveCheckinGoal() {
-  if (checkinStep === 'milestones') saveCheckinMilestonesStep();
-  else if (checkinStep === 'evidence') saveCheckinEvidenceStep();
+  if (checkinStep === 'evidence') saveCheckinEvidenceStep();
   else if (checkinStep === 'roles') saveCheckinRolesStep();
 }
 
@@ -2214,7 +2173,7 @@ function addCheckinEvidenceFromSuggestion(tier, text) {
   const g = goals[activeGoalIdx];
   if ((g.evidenceItems || []).find(e => e.text === text)) return;
   g.evidenceItems = g.evidenceItems || [];
-  g.evidenceItems.push({text, tier, benchmark:''});
+  g.evidenceItems.push({text, tier, benchmark:'', collectMonth:''});
   persistGoals();
   renderCheckinEvidence();
 }
@@ -2225,7 +2184,7 @@ function addCheckinEvidenceManual() {
   if (!val) return;
   const g = goals[activeGoalIdx];
   g.evidenceItems = g.evidenceItems || [];
-  g.evidenceItems.push({text: val, tier: 0, benchmark:''});
+  g.evidenceItems.push({text: val, tier: 0, benchmark:'', collectMonth:''});
   inp.value = '';
   persistGoals();
   renderCheckinEvidence();
@@ -2257,190 +2216,14 @@ function renderCheckinAddedEvidence(g) {
         <label>Target benchmark:</label>
         <input class="ev-benchmark-input" placeholder="e.g., 80% of students by March" value="${esc(e.benchmark||'')}" oninput="saveCheckinGoal()" />
       </div>
+      <div class="ev-benchmark-row">
+        <label>When will you collect this?</label>
+        <select class="ev-collect-month" onchange="saveCheckinGoal()">
+          <option value="" ${!e.collectMonth ? 'selected' : ''}>Choose a month…</option>
+          ${months.map(mo => `<option value="${mo}"${mo === e.collectMonth ? ' selected' : ''}>${mo}</option>`).join('')}
+        </select>
+      </div>
     </div>`).join('');
-}
-
-// ── CHECK-IN: 3 guiding questions that directly become the first 3
-// milestones. Fixed order, no library/workstream picker — replaces the old
-// New/Building/Established auto-populate. Extra milestones beyond these 3
-// use "+ Add Milestone" and render in the plain list below. ──
-const CHECKIN_GUIDING_QUESTIONS = [
-  {
-    type: 'frequency',
-    text: "Is this a one-time event or an ongoing practice — and if it's ongoing, when does it start?",
-    monthLabel: 'Starts',
-    defaultMonth: 'Nov'
-  },
-  {
-    text: 'What will you share with participating teachers, and by when?',
-    placeholder: 'Describe what will happen…',
-    monthLabel: 'By when',
-    defaultMonth: 'Oct'
-  },
-  {
-    text: 'When will teachers have dedicated time to collaborate on this goal — in what existing meeting (PLC, grade-level, department), or a new one?',
-    placeholder: 'Describe what will happen…',
-    monthLabel: 'Starts',
-    defaultMonth: 'Dec'
-  }
-];
-
-// Question 1 doesn't need free text — the "action" being described is the
-// goal itself, not something new the team has to redescribe. It's really a
-// classification (one-time vs. ongoing) + a start month. We still store an
-// auto-generated `text` on the milestone underneath, though, since every
-// downstream consumer (PDF export, Google Sheet sync, readiness checks, the
-// Review Goals "No milestones yet" note, the Active window calc) keys off
-// milestone text to decide whether a milestone is "real."
-function frequencyMilestoneText(frequency, month) {
-  if (frequency === 'one-time') return `One-time event happens in ${month}`;
-  return `Ongoing practice begins in ${month}`;
-}
-
-// Ensures the first 3 milestone slots exist (blank if not yet answered) so
-// the guiding questions always have something to bind to; never overwrites
-// text a team has already entered.
-function ensureCheckinGuidingSlots(g) {
-  g.milestones = g.milestones || [];
-  for (let i = 0; i < CHECKIN_GUIDING_QUESTIONS.length; i++) {
-    const q = CHECKIN_GUIDING_QUESTIONS[i];
-    if (!g.milestones[i]) {
-      if (q.type === 'frequency') {
-        g.milestones[i] = {month: q.defaultMonth, text: '', benchmark: '', frequency: ''};
-      } else {
-        g.milestones[i] = {month: q.defaultMonth, text: '', benchmark: ''};
-      }
-    }
-  }
-}
-
-function renderCheckinGuidingQuestions() {
-  const g = goals[activeGoalIdx];
-  ensureCheckinGuidingSlots(g);
-  const wrap = document.getElementById('checkinGuidingQuestions');
-  if (!wrap) return;
-  wrap.innerHTML = CHECKIN_GUIDING_QUESTIONS.map((q, i) => {
-    const m = g.milestones[i];
-    const unanswered = !m.text || !m.text.trim();
-    const dotHtml = unanswered ? '<span class="q-unanswered-dot" title="Not yet answered"></span>' : '';
-    const answerHtml = q.type === 'frequency'
-      ? `<div class="q-answer-row">
-          <select class="q-frequency-select" onchange="updateCheckinFrequencyAnswer(${i}, 'frequency', this.value)">
-            <option value="" ${!m.frequency ? 'selected' : ''} disabled>Choose one…</option>
-            <option value="ongoing" ${m.frequency === 'ongoing' ? 'selected' : ''}>Ongoing practice</option>
-            <option value="one-time" ${m.frequency === 'one-time' ? 'selected' : ''}>One-time event</option>
-          </select>
-          <div class="q-month-field">
-            <label class="q-month-label">${esc(q.monthLabel || 'Month')}</label>
-            <select onchange="updateCheckinFrequencyAnswer(${i}, 'month', this.value)">
-              ${months.map(mo => `<option value="${mo}"${mo === m.month ? ' selected' : ''}>${mo}</option>`).join('')}
-            </select>
-          </div>
-        </div>`
-      : `<div class="q-answer-row">
-          <input type="text" placeholder="${esc(q.placeholder)}" value="${(m.text||'').replace(/"/g,'&quot;')}" oninput="updateCheckinGuidingAnswer(${i}, 'text', this.value, true)" />
-          <div class="q-month-field">
-            <label class="q-month-label">${esc(q.monthLabel || 'Month')}</label>
-            <select onchange="updateCheckinGuidingAnswer(${i}, 'month', this.value)">
-              ${months.map(mo => `<option value="${mo}"${mo === m.month ? ' selected' : ''}>${mo}</option>`).join('')}
-            </select>
-          </div>
-        </div>`;
-    return `<div class="q-block">
-      <div class="q-text"><span class="q-number">${i+1}</span>${esc(q.text)}${dotHtml}</div>
-      ${answerHtml}
-    </div>`;
-  }).join('');
-}
-
-function refreshCheckinUnansweredDot(i, isUnanswered) {
-  const dotHost = document.querySelectorAll('#checkinGuidingQuestions .q-text')[i];
-  if (!dotHost) return;
-  const hasDot = !!dotHost.querySelector('.q-unanswered-dot');
-  if (hasDot && !isUnanswered) dotHost.querySelector('.q-unanswered-dot').remove();
-  if (!hasDot && isUnanswered) dotHost.insertAdjacentHTML('beforeend', '<span class="q-unanswered-dot" title="Not yet answered"></span>');
-}
-
-// Question 1 only: frequency and month both feed the auto-generated text,
-// so either field changing regenerates it (once both are set).
-function updateCheckinFrequencyAnswer(i, field, value) {
-  const g = goals[activeGoalIdx];
-  ensureCheckinGuidingSlots(g);
-  g.milestones[i][field] = value;
-  const m = g.milestones[i];
-  m.text = m.frequency ? frequencyMilestoneText(m.frequency, m.month) : '';
-  persistGoals();
-  refreshCheckinUnansweredDot(i, !m.text);
-  renderCheckinActiveWindow();
-}
-
-function updateCheckinGuidingAnswer(i, field, value, skipDotRefresh) {
-  const g = goals[activeGoalIdx];
-  ensureCheckinGuidingSlots(g);
-  g.milestones[i][field] = value;
-  persistGoals();
-  // Only re-render the unanswered dot when text changes, and only on blur-ish
-  // moments would be ideal, but a light debounce isn't worth the complexity
-  // here — re-painting just this one dot is cheap since it's not the input
-  // the user is actively typing into.
-  if (field === 'text') {
-    refreshCheckinUnansweredDot(i, !value || !value.trim());
-  }
-  renderCheckinActiveWindow();
-}
-
-// Derived, read-only window spanning the earliest-to-latest month across
-// whatever milestones (guiding + extras) currently have a month set — this
-// replaces a separate start/end date field on Question 1. Ongoing work
-// often has no defined end, so we show what the team has actually committed
-// to rather than asking them to declare a hard end date up front.
-function renderCheckinActiveWindow() {
-  const g = goals[activeGoalIdx];
-  const el = document.getElementById('checkinActiveWindow');
-  if (!el) return;
-  const monthsWithText = (g.milestones || []).filter(m => m.text && m.text.trim()).map(m => m.month);
-  if (!monthsWithText.length) { el.style.display = 'none'; return; }
-  const indices = monthsWithText.map(mo => MONTH_ORDER[mo] ?? 0);
-  const minMo = monthsWithText[indices.indexOf(Math.min(...indices))];
-  const maxMo = monthsWithText[indices.indexOf(Math.max(...indices))];
-  el.textContent = minMo === maxMo ? `Active: ${minMo}` : `Active: ${minMo}–${maxMo}`;
-  el.style.display = 'inline-block';
-}
-
-function renderCheckinMilestones() {
-  const g = goals[activeGoalIdx];
-  renderCheckinGuidingQuestions();
-  renderCheckinActiveWindow();
-  const list = document.getElementById('checkinMilestoneList');
-  const extras = (g.milestones || []).slice(CHECKIN_GUIDING_QUESTIONS.length);
-  list.innerHTML = extras.map((m, extraI) => {
-    const i = extraI + CHECKIN_GUIDING_QUESTIONS.length;
-    return `<div class="checkin-milestone-item">
-      <select onchange="saveCheckinGoal();renderCheckinActiveWindow()">
-        ${months.map(mo => `<option value="${mo}"${mo === m.month ? ' selected' : ''}>${mo}</option>`).join('')}
-      </select>
-      <input type="text" placeholder="Describe this milestone…" value="${(m.text||'').replace(/"/g,'&quot;')}" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly();renderCheckinActiveWindow()" />
-      <button class="remove-btn" onclick="removeCheckinMilestone(${i})">−</button>
-    </div>`;
-  }).join('');
-}
-
-function addCheckinMilestone() {
-  saveCheckinGoal();
-  const g = goals[activeGoalIdx];
-  g.milestones = g.milestones || [];
-  ensureCheckinGuidingSlots(g);
-  g.milestones.push({month:'Sep', text:'', benchmark:''});
-  persistGoals();
-  renderCheckinMilestones();
-}
-
-function removeCheckinMilestone(i) {
-  saveCheckinGoal();
-  const g = goals[activeGoalIdx];
-  g.milestones.splice(i, 1);
-  persistGoals();
-  renderCheckinMilestones();
 }
 
 function renderCheckinRoles() {
@@ -3485,6 +3268,13 @@ function setDot(id, state) {
   if (h) h.style.display = state==='empty' ? 'block' : 'none';
 }
 
+// Max possible _quickScore: 7 in the full Summer builder (includes the 2
+// milestone-based checks), 5 in check-in mode (those 2 are skipped there
+// since check-in mode has no Milestones step — see _quickScore/_quickIssues).
+function _quickMaxScore() {
+  return document.body.classList.contains('checkin-mode') ? 5 : 7;
+}
+
 // Quick-score a saved goal object without touching the DOM
 function _quickScore(g) {
   if (!g) return 0;
@@ -3495,12 +3285,19 @@ function _quickScore(g) {
   if ((g.selectedComps||[]).length >= 1) s++;
   const bench = (g.evidenceItems||[]).filter(e => e.benchmark && e.benchmark.trim()).length;
   if ((g.evidenceItems||[]).length >= 1 && bench >= 1) s++;
-  if ((g.milestones||[]).length >= 2) s++;
-  // Year coverage: check if milestones span 2+ seasons
-  const mMonths = (g.milestones||[]).map(m=>m.month);
-  const fall = new Set(['Sum','Aug','Sep','Oct','Nov']); const winter = new Set(['Dec','Jan','Feb']); const spring = new Set(['Mar','Apr','May','Jun']);
-  const seasons = (mMonths.some(m=>fall.has(m))?1:0)+(mMonths.some(m=>winter.has(m))?1:0)+(mMonths.some(m=>spring.has(m))?1:0);
-  if ((g.milestones||[]).length >= 2 && seasons >= 2) s++;
+  // Milestone-based Timeline/Year Coverage checks only apply to goals built
+  // via the full Summer goal-builder, which still has a dedicated Milestones
+  // step. Check-in mode replaced that step with evidence collection months,
+  // so these two checks are skipped there rather than always failing.
+  const isCheckinMode = document.body.classList.contains('checkin-mode');
+  if (!isCheckinMode) {
+    if ((g.milestones||[]).length >= 2) s++;
+    // Year coverage: check if milestones span 2+ seasons
+    const mMonths = (g.milestones||[]).map(m=>m.month);
+    const fall = new Set(['Sum','Aug','Sep','Oct','Nov']); const winter = new Set(['Dec','Jan','Feb']); const spring = new Set(['Mar','Apr','May','Jun']);
+    const seasons = (mMonths.some(m=>fall.has(m))?1:0)+(mMonths.some(m=>winter.has(m))?1:0)+(mMonths.some(m=>spring.has(m))?1:0);
+    if ((g.milestones||[]).length >= 2 && seasons >= 2) s++;
+  }
   const filledRoles = (g.roles||[]).filter(r => r.name && r.responsibility).length;
   if (filledRoles >= 2) s++;
   return s;
@@ -3515,11 +3312,14 @@ function _quickIssues(g) {
   const evidence = g?.evidenceItems || [];
   const bench = evidence.filter(e => e.benchmark && e.benchmark.trim()).length;
   if (!(evidence.length >= 1 && bench >= 1)) issues.push('Evidence of Progress: at least 1 item + 1 benchmark');
-  if ((g?.milestones||[]).length < 2) issues.push('Timeline: at least two milestones set');
-  const mMonths = (g?.milestones||[]).map(m=>m.month);
-  const fall = new Set(['Sum','Aug','Sep','Oct','Nov']); const winter = new Set(['Dec','Jan','Feb']); const spring = new Set(['Mar','Apr','May','Jun']);
-  const seasons = (mMonths.some(m=>fall.has(m))?1:0)+(mMonths.some(m=>winter.has(m))?1:0)+(mMonths.some(m=>spring.has(m))?1:0);
-  if (!((g?.milestones||[]).length >= 2 && seasons >= 2)) issues.push('Year Coverage: milestones span your timeline');
+  // Milestone-based checks only apply outside check-in mode — see _quickScore.
+  if (!document.body.classList.contains('checkin-mode')) {
+    if ((g?.milestones||[]).length < 2) issues.push('Timeline: at least two milestones set');
+    const mMonths = (g?.milestones||[]).map(m=>m.month);
+    const fall = new Set(['Sum','Aug','Sep','Oct','Nov']); const winter = new Set(['Dec','Jan','Feb']); const spring = new Set(['Mar','Apr','May','Jun']);
+    const seasons = (mMonths.some(m=>fall.has(m))?1:0)+(mMonths.some(m=>winter.has(m))?1:0)+(mMonths.some(m=>spring.has(m))?1:0);
+    if (!((g?.milestones||[]).length >= 2 && seasons >= 2)) issues.push('Year Coverage: milestones span your timeline');
+  }
   const filledRoles = (g?.roles||[]).filter(r => r.name && r.responsibility).length;
   if (filledRoles < 2) issues.push('Roles & Responsibilities: two or more people assigned');
   return issues;
