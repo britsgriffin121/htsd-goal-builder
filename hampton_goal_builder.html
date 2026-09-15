@@ -593,7 +593,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
     <div id="checkinGoalList"></div>
     <button class="btn-secondary" style="margin-top:10px;" onclick="startAddCheckinGoal()">+ Add a goal</button>
     <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
-      <button class="btn-secondary" id="checkinSkipToPlanBtn" style="display:none;" onclick="tryAdvanceToProjectPlan()">All goals ready — continue to Project Plan →</button>
+      <button class="btn-secondary" id="checkinSkipToPlanBtn" style="display:none;" onclick="tryAdvanceToProjectPlan()">Skip ahead to Project Plan →</button>
       <button class="btn-primary" onclick="proceedFromCheckinReview()">Looks good, continue →</button>
     </div>
   </div>
@@ -1965,20 +1965,15 @@ function renderCheckinSummary() {
   const list = document.getElementById('checkinGoalList');
   if (!list) return;
   const skipBtn = document.getElementById('checkinSkipToPlanBtn');
-  if (skipBtn) skipBtn.style.display = (goals.length && goals.every(goalIsCheckinReady)) ? '' : 'none';
+  if (skipBtn) skipBtn.style.display = goals.length ? '' : 'none';
   list.innerHTML = goals.map((g, i) => {
     const text = g.teamGoal || g.specificOutcome || `Goal ${i + 1} (not yet named)`;
-    const ready = goalIsCheckinReady(g);
-    const status = ready
-      ? `<span class="checkin-goal-status ready">✓ Ready</span>`
-      : `<span class="checkin-goal-status needs">Needs milestones & owners</span>`;
     return `<div class="checkin-goal-row" style="display:block;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;">
         <span class="checkin-goal-row-text" style="flex:1;">${esc(text)}</span>
         ${goals.length > 1 ? `<button class="role-del-btn" style="width:auto;font-size:20px;flex-shrink:0;" title="Remove this goal" onclick="removeCheckinGoal(${i})">×</button>` : ''}
       </div>
       <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
-        ${status}
         <button class="btn-secondary" style="padding:5px 10px;font-size:12.5px;" onclick="startEditCheckinGoalText(${i})">Edit wording</button>
         <button class="btn-secondary" style="padding:5px 10px;font-size:12.5px;" onclick="startCheckinGoalWizard(${i})">Timeline & owners →</button>
       </div>
@@ -1988,23 +1983,15 @@ function renderCheckinSummary() {
 
 function proceedFromCheckinReview() {
   if (!goals.length) { showToast('Add at least one goal before continuing.', 'info'); return; }
-  if (goals.every(goalIsCheckinReady)) { switchPhase('pm'); return; }
-  // Jump straight to the first goal that still needs milestones/roles,
-  // rather than always restarting at goal 0.
-  const idx = goals.findIndex(g => !goalIsCheckinReady(g));
-  startCheckinGoalWizard(idx === -1 ? 0 : idx);
+  startCheckinGoalWizard(0);
 }
 
 function tryAdvanceToProjectPlan() {
   // No saveCurrentGoal() here — same reasoning as openCheckinGoal(). The
   // summary list never touches the full-edit form's shared globals, so
   // there's nothing stale to flush and calling it would clobber real data.
-  const incomplete = goals.filter(g => !goalIsCheckinReady(g)).length;
-  if (incomplete > 0) {
-    showToast(`${incomplete} goal${incomplete === 1 ? '' : 's'} still need${incomplete === 1 ? 's' : ''} milestones and owners — click in to finish before moving on.`, 'info');
-    renderCheckinSummary();
-    return;
-  }
+  // Advancing is no longer gated on completeness — teams decide for
+  // themselves when they're ready to move on.
   switchPhase('pm');
 }
 
