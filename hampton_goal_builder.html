@@ -82,6 +82,19 @@ body.checkin-mode .reflection-nudge{display:block}
 .autosave-dot{width:7px;height:7px;border-radius:50%;background:var(--success);flex-shrink:0}
 .autosave-dot.saving{background:var(--hampton-gold-dark);animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+/* ── Check-in: simple goal summary list ── */
+.checkin-goal-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;background:var(--surface);border:1.5px solid var(--border-strong);border-radius:12px;padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:all 0.15s;text-align:left}
+.checkin-goal-row:hover{border-color:var(--hampton-blue);box-shadow:0 4px 14px rgba(27,79,168,0.1);transform:translateY(-1px)}
+.checkin-goal-row-text{font-size:15px;color:var(--text);line-height:1.5;flex:1}
+.checkin-goal-status{flex-shrink:0;display:inline-flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;margin-top:1px}
+.checkin-goal-status.ready{background:var(--success-bg);color:var(--success)}
+.checkin-goal-status.needs{background:var(--warn-bg);color:var(--warn)}
+.checkin-advance-nudge{margin-bottom:14px;padding:12px 16px;background:var(--warn-bg);border:1px solid #F59E0B;border-radius:8px;font-size:13.5px;color:var(--warn);display:none;align-items:center;gap:10px}
+.checkin-advance-nudge.show{display:flex}
+/* ── Check-in: simple milestone editor (reuses .milestone-item look) ── */
+.checkin-milestone-item{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--hampton-blue-light);border:1.5px solid rgba(27,79,168,0.25);border-radius:var(--radius-sm);margin-bottom:6px}
+.checkin-milestone-item select{border:none!important;box-shadow:none!important;padding:0 0 1px!important;font-size:14.5px;font-weight:600;color:var(--hampton-blue);border-bottom:1.5px solid rgba(27,79,168,0.3)!important;background:transparent;width:56px;flex-shrink:0}
+.checkin-milestone-item input[type=text]{border:none!important;box-shadow:none!important;padding:0!important;font-size:16px;flex:1;background:transparent}
 .conv-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px}
 .conv-card.gold{border-left:6px solid var(--hampton-gold);border-radius:0 12px 12px 0}
 .conv-card.blue{border-left:6px solid var(--hampton-blue);border-radius:0 12px 12px 0}
@@ -418,8 +431,8 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
     <div class="mode-gate-grid">
       <button class="mode-card" onclick="enterMode('checkin')">
         <span class="mode-card-badge">Most teams start here</span>
-        <h3>Check in on our spring goals</h3>
-        <p>Pick your school and we'll pull in the goals your team already set in May. Spend today mapping your timeline, checkpoints, and evidence — not starting over.</p>
+        <h3>Continue planning</h3>
+        <p>Pick your school and we'll pull in the goals your team already set. Spend today mapping your timeline and next steps — not starting over.</p>
         <span class="mode-card-cta">Choose this →</span>
       </button>
       <button class="mode-card mode-card-secondary" onclick="enterMode('new')">
@@ -431,13 +444,13 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- CHECK-IN TEAM PICKER — shown after "Check in on spring goals"    -->
+  <!-- CHECK-IN TEAM PICKER — shown after "Continue planning"           -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <div class="launch-shell" id="checkinPickerShell" style="display:none;">
     <div class="hero-card">
-      <div class="hero-eyebrow">Check In · SY 2026–27</div>
+      <div class="hero-eyebrow">Continue Planning · SY 2026–27</div>
       <h2>Which school are you with today?</h2>
-      <p>We'll load your team's spring goals automatically — no setup needed.</p>
+      <p>We'll load your team's goals automatically — no setup needed.</p>
     </div>
     <div class="team-pick-grid" id="teamPickGrid"></div>
     <div style="margin-top:16px;">
@@ -555,6 +568,73 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <div class="phase-view" id="phaseView-goals">
 
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SIMPLE GOAL SUMMARY — check-in mode's default landing view        -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="checkinSummaryView" style="display:none;">
+  <div class="pm-phase-padding" style="max-width:760px;margin:0 auto;">
+    <div class="hero-card" style="margin-bottom:18px;">
+      <div class="hero-eyebrow">Your Goals</div>
+      <h2>Here's what your team is working on.</h2>
+      <p>Click any goal to add your timeline and assign owners. Once every goal is ready, move on to your project plan.</p>
+    </div>
+    <div id="checkinGoalList"></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
+      <button class="btn-primary" onclick="tryAdvanceToProjectPlan()">Continue to Project Plan →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SIMPLE MILESTONE + ROLES EDITOR — check-in mode's per-goal view   -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="checkinGoalEditorView" style="display:none;">
+  <div class="pm-phase-padding" style="max-width:760px;margin:0 auto;">
+    <button class="btn-secondary" style="margin-bottom:14px;" onclick="backToCheckinSummary()">← Back to your goals</button>
+
+    <div class="conv-card blue" style="margin-bottom:18px;">
+      <span class="card-kicker">Your goal</span>
+      <p id="checkinGoalReadout" style="font-size:16px;color:var(--text);line-height:1.5;margin-bottom:0;"></p>
+      <div style="margin-top:10px;">
+        <a href="#" onclick="event.preventDefault();openFullEditFromCheckin()" style="font-size:12.5px;color:var(--hampton-blue);font-weight:600;">Edit full goal details →</a>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-number">TIMELINE</div><div class="section-title">Timeline & Key Milestones</div></div>
+      <p class="section-desc">When will you check on this goal, and what should be true by then?</p>
+
+      <div class="reflection-nudge" style="display:block;">
+        <div class="reflection-nudge-label">💭 From this morning's ecosystem reflection</div>
+        <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:6px;">Got a "next step" idea from your team's reflection you want to build in? Paste it here and turn it into a milestone.</p>
+        <textarea id="checkinReflectionPasteBox" placeholder="Paste an idea from your reflection report…"></textarea>
+        <div class="reflection-nudge-actions">
+          <button class="reflection-nudge-btn" onclick="addCheckinMilestoneFromReflection()">+ Add as milestone</button>
+        </div>
+      </div>
+
+      <div id="checkinMilestoneList"></div>
+      <button class="add-milestone-btn" onclick="addCheckinMilestone()">+ Add Milestone</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section">
+      <div class="section-header"><div class="section-number">ROLES</div><div class="section-title">Roles & Responsibilities</div></div>
+      <p class="section-desc">Who's doing what, and by when?</p>
+      <table class="roles-table">
+        <thead><tr><th style="width:28%">Team Member</th><th style="width:43%">Responsibility</th><th style="width:18%">By When</th><th style="width:11%"></th></tr></thead>
+        <tbody id="checkinRolesTable"></tbody>
+      </table>
+      <button class="add-row-btn" onclick="addCheckinRoleRow()">+ Add Responsibility</button>
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+      <button class="btn-primary" onclick="backToCheckinSummary()">Done with this goal →</button>
+    </div>
+  </div>
+</div>
+
 <!-- Goal nudge (shown when arriving with no goals built yet) -->
 <div class="phase-nudge" id="goalsNudge">
   <span>💡</span>
@@ -570,7 +650,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
   </div>
 </div>
 
-<div class="layout">
+<div class="layout" id="fullEditLayout">
   <div class="main-form">
 
     <!-- 2 Operational Plan -->
@@ -990,7 +1070,10 @@ let currentPhase = 'launch';
 let launchedOnce = false;
 
 function switchPhase(phase) {
-  saveCurrentGoal();
+  // In check-in mode, the simple editor is the source of truth (saved via
+  // saveCheckinGoal()), not the full-edit form's shared globals — calling
+  // saveCurrentGoal() here would read stale globals and clobber real data.
+  if (!document.body.classList.contains('checkin-mode')) saveCurrentGoal();
   if (phase === 'goals') scaffoldLaunchGoalTabs();
   currentPhase = phase;
   localStorage.setItem('htsd_phase', phase);
@@ -1016,6 +1099,12 @@ function switchPhase(phase) {
   // Show target
   const target = document.getElementById('phaseView-' + phase);
   if (target) { target.classList.add('active'); target.style.display = ''; }
+
+  // In check-in mode, landing on the goals phase should show the simple
+  // summary list, not the full multi-section edit layout.
+  if (phase === 'goals' && document.body.classList.contains('checkin-mode')) {
+    showCheckinSummary();
+  }
 
   // Update stepper state
   updateStepperUI();
@@ -1663,7 +1752,7 @@ function enterMode(mode) {
     const n = SPRING_GOALS[team].length;
     return `<button class="team-pick-btn" onclick="startCheckin('${team.replace(/'/g,"\\'")}')">
       <h4>${team}</h4>
-      <span>${n} spring goal${n === 1 ? '' : 's'} on file</span>
+      <span>${n} goal${n === 1 ? '' : 's'} on file</span>
     </button>`;
   }).join('');
 }
@@ -1708,14 +1797,197 @@ function startCheckin(teamName) {
   document.getElementById('launchSchoolYear').value = '2026–27';
   saveLaunchIdentity();
   localStorage.setItem('htsd_has_launched', 'true');
-  // Paint the DOM with goal 0's data BEFORE switchPhase runs, since
-  // switchPhase() calls saveCurrentGoal() first (reads DOM -> goals array) —
-  // painting first makes that a harmless no-op instead of a clobber.
+  // Paint the DOM with goal 0's data so the underlying full-edit view (and
+  // its shared functions like saveCurrentGoal) stay in sync even though
+  // check-in mode lands on the simple summary view instead.
   renderGoalTabs();
   restoreFormData(goals[activeGoalIdx]);
   switchPhase('goals');
+  showCheckinSummary();
   startSheetAutosave();
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECK-IN: SIMPLE GOAL SUMMARY LIST
+// ─────────────────────────────────────────────────────────────────────────────
+function goalIsCheckinReady(g) {
+  const hasMilestones = (g.milestones || []).some(m => (m.text || '').trim());
+  const hasRoles = (g.roles || []).some(r => (r.name || '').trim() && (r.responsibility || '').trim());
+  return hasMilestones && hasRoles;
+}
+
+function showCheckinSummary() {
+  document.getElementById('goalNav').style.display = 'none';
+  document.getElementById('fullEditLayout').style.display = 'none';
+  document.getElementById('goalsNudge').classList.remove('show');
+  document.getElementById('checkinGoalEditorView').style.display = 'none';
+  document.getElementById('checkinSummaryView').style.display = '';
+  renderCheckinSummary();
+}
+
+function renderCheckinSummary() {
+  const list = document.getElementById('checkinGoalList');
+  if (!list) return;
+  list.innerHTML = goals.map((g, i) => {
+    const text = g.teamGoal || g.specificOutcome || `Goal ${i + 1} (not yet named)`;
+    const ready = goalIsCheckinReady(g);
+    const status = ready
+      ? `<span class="checkin-goal-status ready">✓ Ready</span>`
+      : `<span class="checkin-goal-status needs">Needs milestones & owners</span>`;
+    return `<button class="checkin-goal-row" onclick="openCheckinGoal(${i})">
+      <span class="checkin-goal-row-text">${text.replace(/</g,'&lt;')}</span>
+      ${status}
+    </button>`;
+  }).join('');
+}
+
+function tryAdvanceToProjectPlan() {
+  // No saveCurrentGoal() here — same reasoning as openCheckinGoal(). The
+  // summary list never touches the full-edit form's shared globals, so
+  // there's nothing stale to flush and calling it would clobber real data.
+  const incomplete = goals.filter(g => !goalIsCheckinReady(g)).length;
+  if (incomplete > 0) {
+    showToast(`${incomplete} goal${incomplete === 1 ? '' : 's'} still need${incomplete === 1 ? 's' : ''} milestones and owners — click in to finish before moving on.`, 'info');
+    renderCheckinSummary();
+    return;
+  }
+  switchPhase('pm');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECK-IN: SIMPLE MILESTONE + ROLES EDITOR (per goal)
+// ─────────────────────────────────────────────────────────────────────────────
+function openCheckinGoal(idx) {
+  // NOTE: deliberately does NOT call saveCurrentGoal() here. That function
+  // reads the full-edit view's shared global `milestones`/`evidenceItems`
+  // variables, which are stale (last set whenever restoreFormData() was
+  // called) whenever the simple check-in editor — which never touches those
+  // globals — is the thing that's actually been in use. Calling it here
+  // clobbered goals[idx].milestones with stale/empty data. The simple
+  // editor is fully self-contained via saveCheckinGoal().
+  activeGoalIdx = idx;
+  document.getElementById('checkinSummaryView').style.display = 'none';
+  document.getElementById('checkinGoalEditorView').style.display = '';
+  const g = goals[activeGoalIdx];
+  document.getElementById('checkinGoalReadout').textContent =
+    g.teamGoal || g.specificOutcome || `Goal ${idx + 1} (not yet named)`;
+  renderCheckinMilestones();
+  renderCheckinRoles();
+}
+
+function backToCheckinSummary() {
+  saveCheckinGoal();
+  document.getElementById('checkinGoalEditorView').style.display = 'none';
+  document.getElementById('checkinSummaryView').style.display = '';
+  renderCheckinSummary();
+}
+
+function openFullEditFromCheckin() {
+  saveCheckinGoal();
+  document.getElementById('checkinSummaryView').style.display = 'none';
+  document.getElementById('checkinGoalEditorView').style.display = 'none';
+  document.getElementById('goalNav').style.display = '';
+  document.getElementById('fullEditLayout').style.display = '';
+  renderGoalTabs();
+  restoreFormData(goals[activeGoalIdx]);
+}
+
+// Reads the simple editor's own milestone/roles DOM and writes it into the
+// active goal — independent of getFormData()/the full-edit view's fields,
+// since the simple view doesn't share those inputs.
+function saveCheckinGoal() {
+  const g = goals[activeGoalIdx];
+  if (!g) return;
+  const msEls = document.querySelectorAll('#checkinMilestoneList .checkin-milestone-item');
+  g.milestones = Array.from(msEls).map(el => ({
+    month: el.querySelector('select').value,
+    text: el.querySelector('input[type=text]').value,
+    benchmark: ''
+  })).filter(m => m.text.trim());
+
+  const roleRows = document.querySelectorAll('#checkinRolesTable tr');
+  g.roles = Array.from(roleRows).map(row => {
+    const inputs = row.querySelectorAll('input');
+    return { name: inputs[0]?.value || '', responsibility: inputs[1]?.value || '', byWhen: inputs[2]?.value || '' };
+  }).filter(r => r.name.trim() || r.responsibility.trim());
+
+  persistGoals();
+}
+
+function renderCheckinMilestones() {
+  const g = goals[activeGoalIdx];
+  const list = document.getElementById('checkinMilestoneList');
+  const ms = (g.milestones && g.milestones.length) ? g.milestones : [];
+  list.innerHTML = ms.map((m, i) => `
+    <div class="checkin-milestone-item">
+      <select onchange="saveCheckinGoal()">
+        ${months.map(mo => `<option value="${mo}"${mo === m.month ? ' selected' : ''}>${mo}</option>`).join('')}
+      </select>
+      <input type="text" placeholder="Describe this milestone…" value="${(m.text||'').replace(/"/g,'&quot;')}" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" />
+      <button class="remove-btn" onclick="removeCheckinMilestone(${i})">−</button>
+    </div>`).join('');
+}
+
+function addCheckinMilestone() {
+  saveCheckinGoal();
+  const g = goals[activeGoalIdx];
+  g.milestones = g.milestones || [];
+  g.milestones.push({month:'Sep', text:'', benchmark:''});
+  persistGoals();
+  renderCheckinMilestones();
+}
+
+function removeCheckinMilestone(i) {
+  saveCheckinGoal();
+  const g = goals[activeGoalIdx];
+  g.milestones.splice(i, 1);
+  persistGoals();
+  renderCheckinMilestones();
+}
+
+function addCheckinMilestoneFromReflection() {
+  const box = document.getElementById('checkinReflectionPasteBox');
+  const text = (box?.value || '').trim();
+  if (!text) return;
+  const g = goals[activeGoalIdx];
+  g.milestones = g.milestones || [];
+  g.milestones.push({month:'Sep', text, benchmark:''});
+  persistGoals();
+  renderCheckinMilestones();
+  box.value = '';
+  showToast('Added to your milestones ✓', 'success');
+}
+
+function renderCheckinRoles() {
+  const g = goals[activeGoalIdx];
+  const tbody = document.getElementById('checkinRolesTable');
+  const roles = (g.roles && g.roles.length) ? g.roles : [{name:'',responsibility:'',byWhen:''}];
+  tbody.innerHTML = roles.map(r => `<tr>
+    <td><input type="text" value="${(r.name||'').replace(/"/g,'&quot;')}" placeholder="Name" list="memberDatalist" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td>
+    <td><input type="text" value="${(r.responsibility||'').replace(/"/g,'&quot;')}" placeholder="What are they responsible for?" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td>
+    <td><input type="text" value="${(r.byWhen||'').replace(/"/g,'&quot;')}" placeholder="By when?" oninput="saveCheckinGoal()" /></td>
+    <td><button class="role-del-btn" onclick="removeCheckinRoleRow(this)" title="Remove">×</button></td>
+  </tr>`).join('');
+}
+
+function addCheckinRoleRow() {
+  saveCheckinGoal();
+  const tbody = document.getElementById('checkinRolesTable');
+  const row = document.createElement('tr');
+  row.innerHTML = `<td><input type="text" placeholder="Name" list="memberDatalist" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td><td><input type="text" placeholder="By when?" oninput="saveCheckinGoal()" /></td><td><button class="role-del-btn" onclick="removeCheckinRoleRow(this)" title="Remove">×</button></td>`;
+  tbody.appendChild(row);
+}
+
+function removeCheckinRoleRow(btn) {
+  const row = btn.closest('tr');
+  const tbody = document.getElementById('checkinRolesTable');
+  if (tbody.querySelectorAll('tr').length > 1) row.remove();
+  else row.querySelectorAll('input').forEach(el => el.value = '');
+  saveCheckinGoal();
+}
+
+// Cheap re-check of readiness without a full re-render while typing
+function renderCheckinSummaryBadgeOnly() { /* status recalculates on backToCheckinSummary() */ }
 
 function addMilestoneFromReflection() {
   const box = document.getElementById('reflectionPasteBox');
