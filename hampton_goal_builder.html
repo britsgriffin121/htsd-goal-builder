@@ -2040,32 +2040,17 @@ function setAutosaveState(state) {
 
 function runSheetAutosave() {
   if (autosaveInFlight) return;
-  saveCurrentGoal();
+  // Note: does NOT call saveCurrentGoal() — see the note in switchPhase()
+  // and openCheckinGoal() about why that clobbers check-in mode's data.
+  // Check-in goals are kept current via saveCheckinGoal() as the team types.
   const validGoals = goals.filter(g => g.teamGoal || g.specificOutcome || g.selectedGoalNum);
   if (!validGoals.length) return;
   autosaveInFlight = true;
   setAutosaveState('saving');
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzYMWLCPTyz_2H5DHjKT8l-KeTivGndrG3s1kUMGIrb_4vMrIVZhvqy2XKztHF-baQDBQ/exec';
-  fetch(APPS_SCRIPT_URL, {
-    method: 'POST',
-    mode: 'cors',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      teamName: validGoals[0]?.teamName || 'Design Team',
-      autosave: true,
-      goals: validGoals.map(g => ({
-        goalNum:         g.selectedGoalNum,
-        outcomeKey:      g.outcomeKey || 'unmatched',
-        specificOutcome: g.specificOutcome || '',
-        teamGoal:        g.teamGoal || '',
-        evidenceItems:   g.evidenceItems || [],
-        milestones:      g.milestones || [],
-      }))
-    })
-  })
-  .then(() => setAutosaveState('saved'))
-  .catch(() => setAutosaveState('error'))
-  .finally(() => { autosaveInFlight = false; });
+  logToSheet(validGoals, { autosave: true, silent: true, pmData })
+    .then(() => setAutosaveState('saved'))
+    .catch(() => setAutosaveState('error'))
+    .finally(() => { autosaveInFlight = false; });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3255,31 +3240,58 @@ const HAMPTON_LOGO_B64 = 'data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHY
 // Page order: 1. Cover (landscape) · 2+ Goal detail pages (portrait) ·
 //             Then per-person ownership pages · Final meeting notes page
 // ─────────────────────────────────────────────────────────────────────────────
-function logToSheet(goalsToLog) {
+// Builds a stable per-goal key so the Milestones/Roles tabs can link back to
+// their parent row in Goal Submissions even across resubmits/autosaves
+// (Team Name + Goal Number alone isn't unique across multiple submissions).
+function buildGoalId(teamName, goalNum, submissionTimestamp) {
+  return `${teamName}__${goalNum}__${submissionTimestamp}`;
+}
+
+// Returns the fetch Promise so callers (export vs. autosave) can react to
+// success/failure differently instead of duplicating the request logic.
+function logToSheet(goalsToLog, opts) {
+  opts = opts || {};
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzYMWLCPTyz_2H5DHjKT8l-KeTivGndrG3s1kUMGIrb_4vMrIVZhvqy2XKztHF-baQDBQ/exec';
-  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return;
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return Promise.resolve();
   const validGoals = goalsToLog.filter(g => g.selectedGoalNum);
   validGoals.forEach(g => { if (!g.outcomeKey) console.warn('Goal missing outcomeKey:', g.teamGoal); });
-  if (!validGoals.length) return;
-  fetch(APPS_SCRIPT_URL, {
+  if (!validGoals.length) return Promise.resolve();
+  const teamName = goalsToLog[0]?.teamName || 'Design Team';
+  const submissionTimestamp = new Date().toISOString();
+
+  const req = fetch(APPS_SCRIPT_URL, {
     method: 'POST',
     mode: 'cors',
     headers: {
       'Content-Type': 'text/plain;charset=utf-8'
     },
     body: JSON.stringify({
-      teamName: goalsToLog[0]?.teamName || 'Design Team',
+      teamName,
+      submissionTimestamp,
+      autosave: !!opts.autosave,
       goals: validGoals.map(g => ({
-        goalNum:         g.selectedGoalNum,
-        outcomeKey:      g.outcomeKey || 'unmatched',
-        specificOutcome: g.specificOutcome || '',
-        teamGoal:        g.teamGoal        || '',
-        evidenceItems:   g.evidenceItems   || []
-      }))
+        goalId:              buildGoalId(teamName, g.selectedGoalNum, submissionTimestamp),
+        goalNum:              g.selectedGoalNum,
+        outcomeKey:           g.outcomeKey || 'unmatched',
+        specificOutcome:      g.specificOutcome || '',
+        teamGoal:             g.teamGoal        || '',
+        evidenceItems:        g.evidenceItems   || [],
+        selectedComps:        g.selectedComps   || [],
+        goalCompletionMonth:  g.goalCompletionMonth || '',
+        milestones:           g.milestones      || [],
+        roles:                g.roles           || []
+      })),
+      // Team-level (not per-goal) Project Management data
+      checkpointDates:  (opts.pmData && opts.pmData.checkpointDates)  || {},
+      crossGoalRoles:   (opts.pmData && opts.pmData.crossGoalRoles)   || []
     })
-  })
-  .then(() => showToast('Plan submitted to facilitator ✓', 'success'))
-  .catch(() => showToast('Submission failed — please notify your facilitator', 'warn'));
+  });
+
+  if (!opts.silent) {
+    req.then(() => showToast('Plan submitted to facilitator ✓', 'success'))
+       .catch(() => showToast('Submission failed — please notify your facilitator', 'warn'));
+  }
+  return req;
 }
 
 function exportAllGoalsPDF() {
@@ -3343,7 +3355,7 @@ function exportAllGoalsPDF() {
 function runExportAllGoalsPDF() {
   const allGoals = goals.filter(g => g.teamGoal || g.specificOutcome || g.selectedGoalNum);
   if (!allGoals.length) return;
-  logToSheet(allGoals);
+  logToSheet(allGoals, { pmData });
 
   document.getElementById('genOverlay').classList.add('open');
   try {
