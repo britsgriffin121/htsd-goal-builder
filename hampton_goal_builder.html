@@ -1563,7 +1563,7 @@ const PM_DEFAULT_ROLES = [
   {name:'', responsibility:'Facilitate design team meetings and track progress', cadence:'Ongoing'},
   {name:'', responsibility:'Schedule and communicate design team meetings and review checkpoints', cadence:'Ongoing'},
   {name:'', responsibility:'Collect and organize evidence across all goals', cadence:'Each checkpoint'},
-  {name:'', responsibility:'Coordinate Learner-Centered Pulse Survey distribution and launch with LCC', cadence:'Oct'},
+  {name:'', responsibility:'Coordinate Learner-Centered Pulse Survey distribution and launch with LCC', cadence:'Dec'},
   {name:'', responsibility:'Document and share learning with the broader school community', cadence:'May'},
   {name:'', responsibility:'Communicate goal progress to district team', cadence:'Ongoing'},
   {name:'', responsibility:'Celebrate goal progress with school staff and community', cadence:'Ongoing'},
@@ -1571,8 +1571,8 @@ const PM_DEFAULT_ROLES = [
 const PM_CHECKPOINT_MONTHS = ['Sep','Nov','Jan','Mar','May'];
 const PM_CHECKPOINT_FOCUS = {
   Sep: 'Review available data and establish baselines where possible; confirm focus across all goals; set team norms; check in on summer responsibilities — mark complete or adjust timelines as needed; clarify responsibilities and action steps for the next two months so the team leaves with a clear plan through November',
-  Nov: 'Review Pulse Survey data as a team; monitor progress across all goals; adjust supports and redistribute workload as needed; confirm evidence collection plan is in place before the January checkpoint',
-  Jan: 'Reflect on mid-year evidence across all goals; revise approach for second half; prepare to share progress with your broader school community and district team',
+  Nov: 'Monitor progress across all goals; adjust supports and redistribute workload as needed; confirm the team is ready to distribute the Learner-Centered Pulse Survey in December; confirm evidence collection plan is in place before the January checkpoint',
+  Jan: 'Review Pulse Survey results alongside your other evidence; reflect on mid-year progress across all goals; revise approach for second half; prepare to share progress with your broader school community and district team',
   Mar: 'Expand and refine implementation across all goals; collect additional student evidence; begin planning end-of-year documentation',
   May: 'Measure impact across all goals; document learning and celebrate progress; identify what carries forward into next year\'s planning',
 };
@@ -1597,7 +1597,7 @@ function initPmData() {
     'Facilitate design team meetings and track progress': 'Ongoing',
     'Schedule and communicate design team meetings and review checkpoints': 'Ongoing',
     'Collect and organize evidence across all goals': 'Each checkpoint',
-    'Coordinate Learner-Centered Pulse Survey distribution and launch with LCC': 'Oct',
+    'Coordinate Learner-Centered Pulse Survey distribution and launch with LCC': 'Dec',
     'Document and share learning with the broader school community': 'May',
     'Communicate goal progress to district team': 'Ongoing',
     'Celebrate goal progress with school staff and community': 'Ongoing',
@@ -2264,17 +2264,17 @@ function renderCheckinAddedEvidence(g) {
 const CHECKIN_GUIDING_QUESTIONS = [
   {
     text: "Is this a one-time event or an ongoing practice — and if it's ongoing, when does it start?",
-    placeholder: 'e.g., Begin ongoing integration of I can statements into daily reflection',
+    placeholder: 'Describe what will happen…',
     defaultMonth: 'Nov'
   },
   {
     text: 'What will you share with participating teachers, and by when?',
-    placeholder: 'e.g., Share I can statements and the testing timeline with teachers',
+    placeholder: 'Describe what will happen…',
     defaultMonth: 'Oct'
   },
   {
     text: 'When and how often will you check in on this specific goal — in what existing meeting, or a new one?',
-    placeholder: 'e.g., Hold monthly check-ins on this goal in grade-level PLCs',
+    placeholder: 'Describe what will happen…',
     defaultMonth: 'Dec'
   }
 ];
@@ -3221,8 +3221,8 @@ const BASE_MILESTONE_TEMPLATES = {
   new: [
     {month:'Aug', text:'Review this goal at team kickoff (Aug)'},
     {month:'Sep', text:'Complete initial planning and gather baseline data'},
-    {month:'Oct', text:'Administer the Learner-Centered Pulse Survey - coordinate distribution and launch with LCC'},
     {month:'Nov', text:'Launch first prototype or pilot with a small group'},
+    {month:'Dec', text:'Administer the Learner-Centered Pulse Survey - coordinate distribution and launch with LCC'},
     {month:'Jan', text:'Mid-year check-in - review evidence and adjust approach'},
     {month:'Mar', text:'Expand pilot and collect second round of evidence'},
     {month:'May', text:'Final reflection - compile evidence and celebrate progress'},
@@ -3230,8 +3230,8 @@ const BASE_MILESTONE_TEMPLATES = {
   building: [
     {month:'Aug', text:'Review this goal\'s prior year learning at team kickoff (Aug)'},
     {month:'Sep', text:'Share goals with staff and gather baseline feedback'},
-    {month:'Oct', text:'Administer the Learner-Centered Pulse Survey - coordinate distribution and launch with LCC'},
     {month:'Oct', text:'Implement first iteration with targeted improvements'},
+    {month:'Dec', text:'Administer the Learner-Centered Pulse Survey - coordinate distribution and launch with LCC'},
     {month:'Dec', text:'Check-in - compare evidence to last year\'s baseline'},
     {month:'Feb', text:'Refine approach based on mid-year data'},
     {month:'Apr', text:'Present progress to building leadership'},
@@ -3239,16 +3239,16 @@ const BASE_MILESTONE_TEMPLATES = {
   established: [
     {month:'Aug', text:'Set stretch impact goals based on prior year outcomes'},
     {month:'Sep', text:'Launch with full implementation - document with artifacts'},
-    {month:'Oct', text:'Administer the Learner-Centered Pulse Survey - coordinate distribution and launch with LCC'},
     {month:'Nov', text:'First learning walk or observation cycle'},
+    {month:'Dec', text:'Administer the Learner-Centered Pulse Survey - coordinate distribution and launch with LCC'},
     {month:'Jan', text:'Analyze Tier 3 and Tier 4 evidence - identify patterns'},
     {month:'Mar', text:'Share findings with colleagues - invite peer feedback'},
     {month:'May', text:'Showcase student outcomes and plan for next year'},
   ],
   default: [
     {month:'Aug', text:'Review this goal at team kickoff (Aug)'},
-    {month:'Oct', text:'Administer the Learner-Centered Pulse Survey - coordinate distribution and launch with LCC'},
     {month:'Oct', text:'First implementation checkpoint'},
+    {month:'Dec', text:'Administer the Learner-Centered Pulse Survey - coordinate distribution and launch with LCC'},
     {month:'Dec', text:'Mid-year evidence review'},
     {month:'Feb', text:'Refine approach based on data'},
     {month:'Apr', text:'Collect final evidence artifacts'},
