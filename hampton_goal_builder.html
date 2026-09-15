@@ -192,6 +192,12 @@ body.checkin-mode .reflection-nudge{display:block}
 .cadence-focus{font-size:13px;color:var(--text);line-height:1.45}
 .cadence-owner-input,.cadence-date-input{width:100%;font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--text);background:transparent;border:none;outline:none;padding:3px 2px;min-width:80px}
 .cadence-owner-input:focus,.cadence-date-input:focus{background:var(--hampton-blue-light);border-radius:4px}
+.cadence-node-label{position:relative;cursor:help;display:inline-flex;align-items:center;gap:4px}
+.cadence-node-label .cadence-info-dot{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--border-strong);color:#fff;font-size:9px;font-weight:700;font-style:normal;flex-shrink:0}
+.cadence-node-label:hover .cadence-info-dot{background:var(--hampton-blue)}
+.cadence-node-tooltip{visibility:hidden;opacity:0;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:#1B2733;color:#fff;font-size:12px;font-weight:500;line-height:1.4;text-align:left;padding:8px 10px;border-radius:6px;width:200px;box-shadow:0 4px 14px rgba(0,0,0,0.2);z-index:20;transition:opacity 0.12s ease;pointer-events:none}
+.cadence-node-tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:#1B2733}
+.cadence-node-label:hover .cadence-node-tooltip{visibility:visible;opacity:1}
 .pm-divider{border:none;border-top:1px solid var(--border);margin:24px 0}
 @media (max-width:760px){.goal-nav{padding:10px 16px;align-items:flex-start;flex-direction:column}.goal-nav-tabs{width:100%}}
 .layout{display:grid;grid-template-columns:1fr min(270px,22vw);gap:0}
@@ -2180,7 +2186,10 @@ function renderPmCadence() {
       <div style="flex:1;min-width:120px;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;">
         ${!isLast ? `<div style="position:absolute;top:15px;left:50%;width:100%;height:3px;background:var(--border-strong);z-index:0;"></div>` : ''}
         <div style="width:32px;height:32px;border-radius:50%;background:var(--hampton-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;z-index:1;position:relative;">${mo}</div>
-        <div style="font-size:12.5px;font-weight:600;color:var(--text);margin-top:8px;line-height:1.3;" title="${esc(PM_CHECKPOINT_FOCUS[mo])}">${esc(PM_CHECKPOINT_SHORT[mo] || mo)}</div>
+        <div class="cadence-node-label" style="font-size:12.5px;font-weight:600;color:var(--text);margin-top:8px;line-height:1.3;">
+          <span>${esc(PM_CHECKPOINT_SHORT[mo] || mo)}</span><span class="cadence-info-dot">i</span>
+          <span class="cadence-node-tooltip">${esc(PM_CHECKPOINT_FOCUS[mo])}</span>
+        </div>
         <input type="date" class="cadence-date-input" value="${esc(dateVal)}" oninput="pmUpdateCheckpoint('${mo}',this.value)" style="margin-top:8px;width:100%;max-width:140px;font-size:12.5px;" />
       </div>`;
   }).join('');
