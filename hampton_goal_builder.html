@@ -81,6 +81,14 @@ body.checkin-mode .reflection-nudge{display:block}
 .reflection-nudge-actions{display:flex;justify-content:flex-end;margin-top:6px}
 .reflection-nudge-btn{background:var(--hampton-blue);color:#fff;border:none;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
 .reflection-nudge-btn:hover{background:#163E8A}
+/* ── Check-in Milestones: 3 guiding questions ── */
+.q-block{margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.q-number{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--hampton-blue);color:#fff;font-size:11px;font-weight:700;margin-right:8px;flex-shrink:0}
+.q-text{font-size:14.5px;font-weight:600;color:var(--text);line-height:1.4;display:flex;align-items:flex-start;margin-bottom:10px}
+.q-answer-row{display:flex;gap:8px;margin-left:28px}
+.q-answer-row input{flex:1;border:1.5px solid var(--border-strong);border-radius:8px;padding:9px 12px;font-size:14px;font-family:'DM Sans',sans-serif}
+.q-answer-row select{border:1.5px solid var(--border-strong);border-radius:8px;padding:9px 10px;font-size:14px;width:90px;background:#fff;flex-shrink:0}
+.q-unanswered-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--hampton-gold-dark,#C49A10);margin-left:6px;flex-shrink:0;align-self:center}
 /* ── Autosave indicator ── */
 .autosave-indicator{position:fixed;bottom:14px;right:16px;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 13px;font-size:11.5px;color:var(--text-muted);box-shadow:0 2px 10px rgba(26,25,22,0.1);display:flex;align-items:center;gap:6px;z-index:50;opacity:0;transition:opacity 0.3s}
 .autosave-indicator.show{opacity:1}
@@ -634,25 +642,9 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 
     <div class="section">
       <div class="section-header"><div class="section-number">TIMELINE</div><div class="section-title">Timeline & Key Milestones</div></div>
-      <p class="section-desc">When will you check on this goal, and what should be true by then?</p>
+      <p class="section-desc">Answer these three questions about your goal — pick a month and describe what will happen. Each answer becomes one of your milestones. Add more below if you need them.</p>
 
-      <div class="roles-suggest-area" style="margin-bottom:12px;">
-        <span class="roles-suggest-label" style="font-size:13px;color:var(--text-muted);font-style:italic;display:block;margin-bottom:8px;">Is this work new, building, or established? We'll suggest milestones to match.</span>
-        <div class="workstream-btns" style="display:flex;gap:8px;">
-          <button class="wt-btn" id="checkin-wt-new" onclick="setCheckinWorkstream('new')">New</button>
-          <button class="wt-btn" id="checkin-wt-building" onclick="setCheckinWorkstream('building')">Building</button>
-          <button class="wt-btn" id="checkin-wt-established" onclick="setCheckinWorkstream('established')">Established</button>
-        </div>
-      </div>
-
-      <div class="reflection-nudge" style="display:block;">
-        <div class="reflection-nudge-label">💭 From this morning's ecosystem reflection</div>
-        <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:6px;">Got a "next step" idea from your team's reflection you want to build in? Paste it here and turn it into a milestone.</p>
-        <textarea id="checkinReflectionPasteBox" placeholder="Paste an idea from your reflection report…"></textarea>
-        <div class="reflection-nudge-actions">
-          <button class="reflection-nudge-btn" onclick="addCheckinMilestoneFromReflection()">+ Add as milestone</button>
-        </div>
-      </div>
+      <div id="checkinGuidingQuestions"></div>
 
       <div id="checkinMilestoneList"></div>
       <button class="add-milestone-btn" onclick="addCheckinMilestone()">+ Add Milestone</button>
@@ -1968,6 +1960,7 @@ function renderCheckinSummary() {
   if (skipBtn) skipBtn.style.display = goals.length ? '' : 'none';
   list.innerHTML = goals.map((g, i) => {
     const text = g.teamGoal || g.specificOutcome || `Goal ${i + 1} (not yet named)`;
+    const hasAnyMilestoneText = (g.milestones || []).some(m => m.text && m.text.trim());
     return `<div class="checkin-goal-row" style="display:block;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;">
         <span class="checkin-goal-row-text" style="flex:1;">${esc(text)}</span>
@@ -1976,6 +1969,7 @@ function renderCheckinSummary() {
       <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
         <button class="btn-secondary" style="padding:5px 10px;font-size:12.5px;" onclick="startEditCheckinGoalText(${i})">Edit wording</button>
         <button class="btn-secondary" style="padding:5px 10px;font-size:12.5px;" onclick="startCheckinGoalWizard(${i})">Timeline & owners →</button>
+        ${!hasAnyMilestoneText ? `<span style="font-size:12px;color:var(--text-light);font-style:italic;">No milestones yet</span>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -2070,7 +2064,6 @@ function goToCheckinStep(step) {
     document.getElementById('checkinStepGoalLabel').textContent = `Step 2 of 2 · Timeline & Owners · ${posLabel}`;
     document.getElementById('checkinGoalReadoutMs').textContent = label;
     renderCheckinMilestones();
-    renderCheckinWorkstreamButtons();
   } else if (step === 'evidence') {
     document.getElementById('checkinEvidenceView').style.display = '';
     document.getElementById('checkinGoalReadoutEv').textContent = label;
@@ -2118,12 +2111,24 @@ function openFullEditFromCheckin() {
 function saveCheckinMilestonesStep() {
   const g = goals[activeGoalIdx];
   if (!g) return;
-  const msEls = document.querySelectorAll('#checkinMilestoneList .checkin-milestone-item');
-  g.milestones = Array.from(msEls).map(el => ({
+  // The 3 guiding questions live directly in g.milestones[0..2] already (kept
+  // in sync as-you-type by updateCheckinGuidingAnswer), including blanks —
+  // per the no-hard-validation decision, an unanswered question stays as a
+  // blank slot rather than being dropped, so the light "unanswered" cue on
+  // Review Goals has something to detect later. Only the extra rows below
+  // question 3 are read fresh from the DOM here.
+  const guidingCount = CHECKIN_GUIDING_QUESTIONS.length;
+  const guiding = (g.milestones || []).slice(0, guidingCount);
+  while (guiding.length < guidingCount) {
+    guiding.push({month: CHECKIN_GUIDING_QUESTIONS[guiding.length].defaultMonth, text: '', benchmark: ''});
+  }
+  const extraEls = document.querySelectorAll('#checkinMilestoneList .checkin-milestone-item');
+  const extras = Array.from(extraEls).map(el => ({
     month: el.querySelector('select').value,
     text: el.querySelector('input[type=text]').value,
     benchmark: ''
   })).filter(m => m.text.trim());
+  g.milestones = guiding.concat(extras);
   persistGoals();
 }
 
@@ -2235,60 +2240,102 @@ function renderCheckinAddedEvidence(g) {
     </div>`).join('');
 }
 
-// ── CHECK-IN: Workstream toggle (full 3-way: new/building/established) —
-// drives which milestone-suggestion template applies, per goal ──
-function renderCheckinWorkstreamButtons() {
-  const g = goals[activeGoalIdx];
-  ['new','building','established'].forEach(w => {
-    const btn = document.getElementById('checkin-wt-' + w);
-    if (btn) btn.classList.toggle('active', g.workstream === w);
-  });
+// ── CHECK-IN: 3 guiding questions that directly become the first 3
+// milestones. Fixed order, no library/workstream picker — replaces the old
+// New/Building/Established auto-populate. Extra milestones beyond these 3
+// use "+ Add Milestone" and render in the plain list below. ──
+const CHECKIN_GUIDING_QUESTIONS = [
+  {
+    text: "Is this a one-time event or an ongoing practice — and if it's ongoing, when does it start?",
+    placeholder: 'e.g., Begin ongoing integration of I can statements into daily reflection',
+    defaultMonth: 'Nov'
+  },
+  {
+    text: 'What will you share with participating teachers, and by when?',
+    placeholder: 'e.g., Share I can statements and the testing timeline with teachers',
+    defaultMonth: 'Oct'
+  },
+  {
+    text: 'When and how often will you check in on this specific goal — in what existing meeting, or a new one?',
+    placeholder: 'e.g., Hold monthly check-ins on this goal in grade-level PLCs',
+    defaultMonth: 'Dec'
+  }
+];
+
+// Ensures the first 3 milestone slots exist (blank if not yet answered) so
+// the guiding questions always have something to bind to; never overwrites
+// text a team has already entered.
+function ensureCheckinGuidingSlots(g) {
+  g.milestones = g.milestones || [];
+  for (let i = 0; i < CHECKIN_GUIDING_QUESTIONS.length; i++) {
+    if (!g.milestones[i]) {
+      g.milestones[i] = {month: CHECKIN_GUIDING_QUESTIONS[i].defaultMonth, text: '', benchmark: ''};
+    }
+  }
 }
 
-function setCheckinWorkstream(w) {
+function renderCheckinGuidingQuestions() {
   const g = goals[activeGoalIdx];
-  g.workstream = w;
-  persistGoals();
-  renderCheckinWorkstreamButtons();
-  maybeShowCheckinMilestoneSuggestions();
+  ensureCheckinGuidingSlots(g);
+  const wrap = document.getElementById('checkinGuidingQuestions');
+  if (!wrap) return;
+  wrap.innerHTML = CHECKIN_GUIDING_QUESTIONS.map((q, i) => {
+    const m = g.milestones[i];
+    const unanswered = !m.text || !m.text.trim();
+    return `<div class="q-block">
+      <div class="q-text"><span class="q-number">${i+1}</span>${esc(q.text)}${unanswered ? '<span class="q-unanswered-dot" title="Not yet answered"></span>' : ''}</div>
+      <div class="q-answer-row">
+        <select onchange="updateCheckinGuidingAnswer(${i}, 'month', this.value)">
+          ${months.map(mo => `<option value="${mo}"${mo === m.month ? ' selected' : ''}>${mo}</option>`).join('')}
+        </select>
+        <input type="text" placeholder="${esc(q.placeholder)}" value="${(m.text||'').replace(/"/g,'&quot;')}" oninput="updateCheckinGuidingAnswer(${i}, 'text', this.value, true)" />
+      </div>
+    </div>`;
+  }).join('');
 }
 
-// Mirrors maybeShowMilestoneSuggestions() from the full-edit flow, but reads
-// and writes goals[activeGoalIdx] directly instead of the shared globals —
-// only pre-populates when milestones are empty, never overwrites real work.
-function maybeShowCheckinMilestoneSuggestions() {
+function updateCheckinGuidingAnswer(i, field, value, skipDotRefresh) {
   const g = goals[activeGoalIdx];
-  if (!g.workstream) return;
-  if ((g.milestones || []).length > 0) return;
-  const template = BASE_MILESTONE_TEMPLATES[g.workstream] || BASE_MILESTONE_TEMPLATES['default'];
-  const completionIdx = g.goalCompletionMonth ? (MONTH_ORDER[g.goalCompletionMonth] ?? null) : null;
-  const filtered = completionIdx !== null
-    ? template.filter(s => (MONTH_ORDER[s.month] ?? 0) <= completionIdx)
-    : template;
-  g.milestones = filtered.map(s => ({month: s.month, text: s.text, benchmark: ''}));
+  ensureCheckinGuidingSlots(g);
+  g.milestones[i][field] = value;
   persistGoals();
-  renderCheckinMilestones();
-  showToast('Suggested milestones added. Edit or remove any that do not fit.', 'success');
+  // Only re-render the unanswered dot when text changes, and only on blur-ish
+  // moments would be ideal, but a light debounce isn't worth the complexity
+  // here — re-painting just this one dot is cheap since it's not the input
+  // the user is actively typing into.
+  if (field === 'text') {
+    const dotHost = document.querySelectorAll('#checkinGuidingQuestions .q-text')[i];
+    if (dotHost) {
+      const hasDot = !!dotHost.querySelector('.q-unanswered-dot');
+      const isUnanswered = !value || !value.trim();
+      if (hasDot && !isUnanswered) dotHost.querySelector('.q-unanswered-dot').remove();
+      if (!hasDot && isUnanswered) dotHost.insertAdjacentHTML('beforeend', '<span class="q-unanswered-dot" title="Not yet answered"></span>');
+    }
+  }
 }
 
 function renderCheckinMilestones() {
   const g = goals[activeGoalIdx];
+  renderCheckinGuidingQuestions();
   const list = document.getElementById('checkinMilestoneList');
-  const ms = (g.milestones && g.milestones.length) ? g.milestones : [];
-  list.innerHTML = ms.map((m, i) => `
-    <div class="checkin-milestone-item">
+  const extras = (g.milestones || []).slice(CHECKIN_GUIDING_QUESTIONS.length);
+  list.innerHTML = extras.map((m, extraI) => {
+    const i = extraI + CHECKIN_GUIDING_QUESTIONS.length;
+    return `<div class="checkin-milestone-item">
       <select onchange="saveCheckinGoal()">
         ${months.map(mo => `<option value="${mo}"${mo === m.month ? ' selected' : ''}>${mo}</option>`).join('')}
       </select>
       <input type="text" placeholder="Describe this milestone…" value="${(m.text||'').replace(/"/g,'&quot;')}" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" />
       <button class="remove-btn" onclick="removeCheckinMilestone(${i})">−</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function addCheckinMilestone() {
   saveCheckinGoal();
   const g = goals[activeGoalIdx];
   g.milestones = g.milestones || [];
+  ensureCheckinGuidingSlots(g);
   g.milestones.push({month:'Sep', text:'', benchmark:''});
   persistGoals();
   renderCheckinMilestones();
@@ -2300,19 +2347,6 @@ function removeCheckinMilestone(i) {
   g.milestones.splice(i, 1);
   persistGoals();
   renderCheckinMilestones();
-}
-
-function addCheckinMilestoneFromReflection() {
-  const box = document.getElementById('checkinReflectionPasteBox');
-  const text = (box?.value || '').trim();
-  if (!text) return;
-  const g = goals[activeGoalIdx];
-  g.milestones = g.milestones || [];
-  g.milestones.push({month:'Sep', text, benchmark:''});
-  persistGoals();
-  renderCheckinMilestones();
-  box.value = '';
-  showToast('Added to your milestones ✓', 'success');
 }
 
 function renderCheckinRoles() {
