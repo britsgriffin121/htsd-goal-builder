@@ -617,6 +617,19 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 
     <div class="section">
       <div class="section-header">
+        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">📅</div>
+        <div>
+          <div class="section-title">Minimum Meeting Cadence</div>
+          <div class="section-desc">These five checkpoints are the minimum meeting cadence for the year. <strong>Schedule all five today</strong> and put 30 minutes on the calendar before you leave. Hover a checkpoint for its full focus.</div>
+        </div>
+      </div>
+      <div id="pmCadenceTbodyKickoff"></div>
+    </div>
+
+    <hr class="pm-divider">
+
+    <div class="section">
+      <div class="section-header">
         <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">PLAN</div>
         <div>
           <div class="section-title">Cross-Goal Responsibilities</div>
@@ -628,35 +641,13 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
           <tr>
             <th style="width:22%">Team Member</th>
             <th>Responsibility</th>
-            <th style="width:12%">Cadence</th>
+            <th style="width:16%">Cadence</th>
             <th style="width:4%"></th>
           </tr>
         </thead>
         <tbody id="pmRolesTbodyKickoff"></tbody>
       </table>
       <button class="pm-add-row-btn" onclick="pmAddRow('pmRolesTbodyKickoff')">＋ Add Responsibility</button>
-    </div>
-
-    <hr class="pm-divider">
-
-    <div class="section">
-      <div class="section-header">
-        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">📅</div>
-        <div>
-          <div class="section-title">Minimum Meeting Cadence</div>
-          <div class="section-desc">These five checkpoints are the minimum meeting cadence for the year. <strong>Schedule all five today</strong> and put 30 minutes on the calendar before you leave.</div>
-        </div>
-      </div>
-      <table class="cadence-table" id="pmCadenceTableKickoff">
-        <thead>
-          <tr>
-            <th style="width:8%">Month</th>
-            <th>Focus</th>
-            <th style="width:18%">Meeting Date</th>
-          </tr>
-        </thead>
-        <tbody id="pmCadenceTbodyKickoff"></tbody>
-      </table>
     </div>
 
     <div style="display:flex;justify-content:flex-end;margin-top:20px;">
@@ -756,9 +747,9 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 
     <div class="section">
       <div class="section-header"><div class="section-number">ROLES</div><div class="section-title">Roles & Responsibilities</div></div>
-      <p class="section-desc">Who's doing what, and by when?</p>
+      <p class="section-desc">What needs to happen, who's doing it, and by when?</p>
       <table class="roles-table">
-        <thead><tr><th style="width:28%">Team Member</th><th style="width:43%">Responsibility</th><th style="width:18%">By When</th><th style="width:11%"></th></tr></thead>
+        <thead><tr><th style="width:43%">Task / Action</th><th style="width:28%">Who</th><th style="width:18%">By When</th><th style="width:11%"></th></tr></thead>
         <tbody id="checkinRolesTable"></tbody>
       </table>
       <button class="add-row-btn" onclick="addCheckinRoleRow()">+ Add Responsibility</button>
@@ -950,7 +941,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
       </div>
 
       <table class="roles-table">
-        <thead><tr><th style="width:28%">Team Member</th><th style="width:43%">Responsibility</th><th style="width:18%">By When</th><th style="width:11%"></th></tr></thead>
+        <thead><tr><th style="width:43%">Task / Action</th><th style="width:28%">Who</th><th style="width:18%">By When</th><th style="width:11%"></th></tr></thead>
         <tbody id="rolesTable"></tbody>
       </table>
       <datalist id="memberDatalist"></datalist>
@@ -1011,7 +1002,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
         <tr>
           <th style="width:22%">Team Member</th>
           <th>Responsibility</th>
-          <th style="width:12%">Cadence</th>
+          <th style="width:16%">Cadence</th>
           <th style="width:4%"></th>
         </tr>
       </thead>
@@ -1028,19 +1019,10 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
       <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">📅</div>
       <div>
         <div class="section-title">Minimum Meeting Cadence</div>
-        <div class="section-desc">These five checkpoints are the minimum meeting cadence for the year. <strong>Schedule all five today</strong> and put 30 minutes on the calendar before you leave this session.</div>
+        <div class="section-desc">These five checkpoints are the minimum meeting cadence for the year. <strong>Schedule all five today</strong> and put 30 minutes on the calendar before you leave this session. Hover a checkpoint for its full focus.</div>
       </div>
     </div>
-    <table class="cadence-table" id="pmCadenceTable">
-      <thead>
-        <tr>
-          <th style="width:8%">Month</th>
-          <th>Focus</th>
-          <th style="width:18%">Meeting Date</th>
-        </tr>
-      </thead>
-      <tbody id="pmCadenceTbody"></tbody>
-    </table>
+    <div id="pmCadenceTbody"></div>
   </div>
 
   <div style="display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;">
@@ -1110,6 +1092,19 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 
     <div class="section">
       <div class="section-header">
+        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">📅</div>
+        <div>
+          <div class="section-title">Minimum Meeting Cadence</div>
+          <div class="section-desc">Last chance to lock in all five dates before you leave.</div>
+        </div>
+      </div>
+      <div id="pmCadenceTbodyCloseout"></div>
+    </div>
+
+    <hr class="pm-divider">
+
+    <div class="section">
+      <div class="section-header">
         <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">PLAN</div>
         <div>
           <div class="section-title">Cross-Goal Responsibilities</div>
@@ -1121,35 +1116,13 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
           <tr>
             <th style="width:22%">Team Member</th>
             <th>Responsibility</th>
-            <th style="width:12%">Cadence</th>
+            <th style="width:16%">Cadence</th>
             <th style="width:4%"></th>
           </tr>
         </thead>
         <tbody id="pmRolesTbodyCloseout"></tbody>
       </table>
       <button class="pm-add-row-btn" onclick="pmAddRow('pmRolesTbodyCloseout')">＋ Add Responsibility</button>
-    </div>
-
-    <hr class="pm-divider">
-
-    <div class="section">
-      <div class="section-header">
-        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">📅</div>
-        <div>
-          <div class="section-title">Minimum Meeting Cadence</div>
-          <div class="section-desc">Last chance to lock in all five dates before you leave.</div>
-        </div>
-      </div>
-      <table class="cadence-table" id="pmCadenceTableCloseout">
-        <thead>
-          <tr>
-            <th style="width:8%">Month</th>
-            <th>Focus</th>
-            <th style="width:18%">Meeting Date</th>
-          </tr>
-        </thead>
-        <tbody id="pmCadenceTbodyCloseout"></tbody>
-      </table>
     </div>
 
     <hr class="pm-divider">
@@ -1520,7 +1493,7 @@ function renderCheckinCrossGoalTimeline() {
       .filter(e => e.text && e.text.trim() && e.collectMonth)
       .map(e => CHART_MONTHS.indexOf(e.collectMonth))
       .filter(idx => idx !== -1);
-    const label = g.goalNickname || g.teamGoal?.substring(0, 32) || `Goal ${gi + 1}`;
+    const label = g.goalNickname || g.teamGoal || `Goal ${gi + 1}`;
     return {
       label,
       color: GOAL_COLORS[gi % GOAL_COLORS.length],
@@ -1540,17 +1513,23 @@ function renderCheckinCrossGoalTimeline() {
     return;
   }
 
-  const labelColW = 130;
+  const labelColW = 190;
   const monthColW = 44;
   const header = `<div style="display:flex;margin-bottom:4px;"><div style="width:${labelColW}px;flex-shrink:0;"></div>${CHART_MONTHS.map(mo => `<div style="width:${monthColW}px;flex-shrink:0;text-align:center;font-size:11px;font-weight:700;color:var(--text-muted);">${mo}</div>`).join('')}</div>`;
 
   const rowsHtml = rows.map(r => {
+    const hasDates = r.startIdx !== null;
     const track = `<div style="position:relative;width:${monthColW * CHART_MONTHS.length}px;height:16px;background:var(--surface-2);border-radius:8px;">` +
-      (r.startIdx !== null ? `<div style="position:absolute;left:${r.startIdx * monthColW}px;width:${(r.endIdx - r.startIdx + 1) * monthColW}px;height:16px;background:${r.color};border-radius:8px;"></div>` : '') +
+      (hasDates ? `<div style="position:absolute;left:${r.startIdx * monthColW}px;width:${(r.endIdx - r.startIdx + 1) * monthColW}px;height:16px;background:${r.color};border-radius:8px;"></div>` : '') +
       `</div>`;
-    return `<div style="display:flex;align-items:center;margin-bottom:8px;">
-      <div style="width:${labelColW}px;flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--text);padding-right:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.label)}">${esc(r.label)}</div>
-      ${track}
+    // A goal with no evidence collection months set gets an empty track —
+    // easy to misread as "this goal is missing" rather than "no dates set
+    // yet", especially once the label itself might also wrap to 2 lines.
+    // Label it explicitly so nothing looks silently dropped.
+    const noDatesNote = hasDates ? '' : '<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-top:2px;">No collection dates set yet</div>';
+    return `<div style="display:flex;align-items:flex-start;margin-bottom:12px;">
+      <div style="width:${labelColW}px;flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--text);padding-right:10px;line-height:1.35;word-wrap:break-word;">${esc(r.label)}${noDatesNote}</div>
+      <div style="padding-top:2px;">${track}</div>
     </div>`;
   }).join('');
 
@@ -2045,14 +2024,16 @@ function persistGoals() {
 }
 
 // ── Team PM Data ────────────────────────────────────────────────────────────
+// Tightened from 7 rows to 5 — the two meeting-logistics rows were near-
+// duplicates of each other, and the two end-of-year communication rows
+// (document/share vs. celebrate) were split for no functional reason. Fewer,
+// more clearly distinct responsibilities read faster at a glance.
 const PM_DEFAULT_ROLES = [
-  {name:'', responsibility:'Facilitate design team meetings and track progress', cadence:'Ongoing'},
-  {name:'', responsibility:'Schedule and communicate design team meetings and review checkpoints', cadence:'Ongoing'},
+  {name:'', responsibility:'Facilitate and schedule design team meetings', cadence:'Ongoing'},
   {name:'', responsibility:'Collect and organize evidence across all goals', cadence:'Each checkpoint'},
   {name:'', responsibility:'Coordinate Learner-Centered Pulse Survey distribution and launch with LCC', cadence:'Dec'},
-  {name:'', responsibility:'Document and share learning with the broader school community', cadence:'May'},
   {name:'', responsibility:'Communicate goal progress to district team', cadence:'Ongoing'},
-  {name:'', responsibility:'Celebrate goal progress with school staff and community', cadence:'Ongoing'},
+  {name:'', responsibility:'Share and celebrate progress with the school community', cadence:'May'},
 ];
 const PM_CHECKPOINT_MONTHS = ['Sep','Nov','Jan','Mar','May'];
 const PM_CHECKPOINT_FOCUS = {
@@ -2061,6 +2042,17 @@ const PM_CHECKPOINT_FOCUS = {
   Jan: 'Review Pulse Survey results alongside your other evidence; reflect on mid-year progress across all goals; revise approach for second half; prepare to share progress with your broader school community and district team',
   Mar: 'Expand and refine implementation across all goals; collect additional student evidence; begin planning end-of-year documentation',
   May: 'Measure impact across all goals; document learning and celebrate progress; identify what carries forward into next year\'s planning',
+};
+// Short-form labels for the horizontal cadence timeline nodes — the full
+// PM_CHECKPOINT_FOCUS text above is still shown as detail (title/tooltip
+// and the "Focus" column in the table-based renders), this is just what
+// fits directly on the visual.
+const PM_CHECKPOINT_SHORT = {
+  Sep: 'Baselines & norms',
+  Nov: 'Monitor & adjust',
+  Jan: 'Mid-year review',
+  Mar: 'Expand & refine',
+  May: 'Measure & celebrate',
 };
 
 let pmData = null;
@@ -2124,6 +2116,28 @@ function renderPmView() {
   renderPmCadence();
 }
 
+// Cadence options for cross-goal responsibilities, shown as a dropdown
+// instead of a free-text field so the column reads clearly at a glance
+// (previously an open text input with only a placeholder hint, so "Oct",
+// "October", and "each Oct" could all show up for the same intent).
+// Each option pairs the stored value with a short plain-language label.
+const CADENCE_OPTIONS = [
+  { value: 'Ongoing', label: 'Ongoing — happens continuously' },
+  { value: 'Each checkpoint', label: 'Each checkpoint — every Sep/Nov/Jan/Mar/May meeting' },
+  ...PM_CHECKPOINT_MONTHS.map(mo => ({ value: mo, label: `${mo} — at that checkpoint` })),
+  { value: 'Dec', label: 'Dec — one-time, December' },
+];
+
+function cadenceOptionsHtml(selected) {
+  // De-dupe in case a month appears in both PM_CHECKPOINT_MONTHS and the
+  // explicit Dec entry (Dec isn't a checkpoint month, so no collision today,
+  // but this keeps it safe if that ever changes).
+  const seen = new Set();
+  return CADENCE_OPTIONS.filter(o => (seen.has(o.value) ? false : (seen.add(o.value), true)))
+    .map(o => `<option value="${o.value}"${o.value === selected ? ' selected' : ''}>${o.label}</option>`)
+    .join('');
+}
+
 function renderPmRoles() {
   if (!pmData) return;
   const tbodies = PM_ROLES_TBODY_IDS.map(id => document.getElementById(id)).filter(Boolean);
@@ -2139,25 +2153,40 @@ function renderPmRoles() {
     <tr>
       <td><input type="text" list="memberDatalist" class="cadence-owner-input" placeholder="Name…" value="${esc(row.name)}" oninput="pmUpdateRole(${i},'name',this.value)" /></td>
       <td class="pm-resp">${esc(row.responsibility)}</td>
-      <td><input type="text" class="cadence-owner-input" placeholder="e.g. Ongoing, Oct" value="${esc(row.cadence||''  )}" oninput="pmUpdateRole(${i},'cadence',this.value)" style="min-width:70px" /></td>
+      <td><select class="cadence-owner-input pm-cadence-select" onchange="pmUpdateRole(${i},'cadence',this.value)" style="min-width:110px">
+        <option value=""${row.cadence ? '' : ' selected'}>Choose…</option>
+        ${cadenceOptionsHtml(row.cadence)}
+      </select></td>
       <td><button class="pm-del-btn" onclick="pmDeleteRole(${i})" title="Remove">−</button></td>
     </tr>
   `).join('');
   tbodies.forEach(tbody => { tbody.innerHTML = rowsHtml; });
 }
 
+// Horizontal cadence timeline: 5 checkpoint nodes on a connecting line,
+// each with its month, a short focus label, and a date field — replacing
+// the old vertical table so the "shape of the year" reads as one picture
+// instead of five similar-looking rows to scan top to bottom.
 function renderPmCadence() {
   if (!pmData) return;
-  const tbodies = PM_CADENCE_TBODY_IDS.map(id => document.getElementById(id)).filter(Boolean);
-  if (!tbodies.length) return;
-  const rowsHtml = PM_CHECKPOINT_MONTHS.map(mo => `
-    <tr>
-      <td><span class="cadence-pill">${mo}</span></td>
-      <td class="cadence-focus">${PM_CHECKPOINT_FOCUS[mo]}</td>
-      <td><input type="date" class="cadence-date-input" value="${esc(pmData.checkpointDates[mo]||'')}" oninput="pmUpdateCheckpoint('${mo}',this.value)" /></td>
-    </tr>
-  `).join('');
-  tbodies.forEach(tbody => { tbody.innerHTML = rowsHtml; });
+  const containers = PM_CADENCE_TBODY_IDS.map(id => document.getElementById(id)).filter(Boolean);
+  if (!containers.length) return;
+
+  const nodeCount = PM_CHECKPOINT_MONTHS.length;
+  const nodesHtml = PM_CHECKPOINT_MONTHS.map((mo, i) => {
+    const isLast = i === nodeCount - 1;
+    const dateVal = pmData.checkpointDates[mo] || '';
+    return `
+      <div style="flex:1;min-width:120px;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;">
+        ${!isLast ? `<div style="position:absolute;top:15px;left:50%;width:100%;height:3px;background:var(--border-strong);z-index:0;"></div>` : ''}
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--hampton-blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;z-index:1;position:relative;">${mo}</div>
+        <div style="font-size:12.5px;font-weight:600;color:var(--text);margin-top:8px;line-height:1.3;" title="${esc(PM_CHECKPOINT_FOCUS[mo])}">${esc(PM_CHECKPOINT_SHORT[mo] || mo)}</div>
+        <input type="date" class="cadence-date-input" value="${esc(dateVal)}" oninput="pmUpdateCheckpoint('${mo}',this.value)" style="margin-top:8px;width:100%;max-width:140px;font-size:12.5px;" />
+      </div>`;
+  }).join('');
+
+  const html = `<div style="display:flex;align-items:flex-start;gap:4px;padding:6px 4px 2px;overflow-x:auto;">${nodesHtml}</div>`;
+  containers.forEach(container => { container.innerHTML = html; });
 }
 
 function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -2175,9 +2204,14 @@ function pmUpdateRole(idx, field, val) {
     const rows = tbody.querySelectorAll('tr');
     const row = rows[idx];
     if (!row) return;
-    const inputs = row.querySelectorAll('input');
-    if (field === 'name' && inputs[0] && inputs[0].value !== val) inputs[0].value = val;
-    if (field === 'cadence' && inputs[1] && inputs[1].value !== val) inputs[1].value = val;
+    if (field === 'name') {
+      const nameInput = row.querySelector('input[list=memberDatalist]');
+      if (nameInput && nameInput.value !== val) nameInput.value = val;
+    }
+    if (field === 'cadence') {
+      const cadenceSelect = row.querySelector('select.pm-cadence-select');
+      if (cadenceSelect && cadenceSelect.value !== val) cadenceSelect.value = val;
+    }
   });
 }
 
@@ -2193,11 +2227,13 @@ function pmAddRow(focusTbodyId) {
   pmData.crossGoalRoles.push({name:'', responsibility:'', cadence:''});
   persistPmData();
   renderPmRoles();
-  // Focus the last name input in whichever table triggered the add
+  // Focus the last row's name input in whichever table triggered the add
   const tbody = document.getElementById(focusTbodyId || 'pmRolesTbody');
   if (tbody) {
-    const inputs = tbody.querySelectorAll('input');
-    if (inputs.length) inputs[inputs.length-3].focus();
+    const rows = tbody.querySelectorAll('tr');
+    const lastRow = rows[rows.length - 1];
+    const nameInput = lastRow?.querySelector('input[list=memberDatalist]');
+    if (nameInput) nameInput.focus();
   }
 }
 
@@ -2434,7 +2470,12 @@ function startCheckin(teamName) {
   const membersField = document.getElementById('launchTeamMembers');
   const roster = TEAM_ROSTERS[teamName];
   if (membersField && !alreadyLoaded && roster) {
-    membersField.value = roster.members.join(', ');
+    // Include the building leader alongside team members so they show up
+    // in the name dropdowns (Roles & Responsibilities, Cross-Goal
+    // Responsibilities) too — leaders often own at least one cross-goal
+    // responsibility even when they're not doing per-goal classroom work.
+    const allNames = roster.lead ? [...roster.members, roster.lead] : roster.members;
+    membersField.value = allNames.join(', ');
   }
   saveLaunchIdentity();
   localStorage.setItem('htsd_has_launched', 'true');
@@ -2564,6 +2605,14 @@ function tryAdvanceToProjectPlan() {
   // when they're ready to move on — but if goals still have no evidence
   // defined, the Project Plan step won't have much to work with, so we
   // surface that rather than silently letting them arrive at an empty plan.
+  //
+  // Destination: check-in mode already set norms/cadence at Kickoff, so
+  // landing on phaseView-pm again here would just replay that exact same
+  // Cross-Goal Responsibilities + Cadence content a second time — which is
+  // what made this feel like being sent "back to the intro" after finishing
+  // the goal wizard. Check-in mode goes straight to the close-out
+  // (phaseView-portfolio) instead; Summer mode still uses the PM phase.
+  const destPhase = document.body.classList.contains('checkin-mode') ? 'portfolio' : 'pm';
   const emptyCount = goals.filter(g => !(g.evidenceItems || []).some(e => e.text && e.text.trim())).length;
   if (emptyCount > 0) {
     const goalWord = emptyCount === 1 ? 'goal doesn\'t' : 'goals don\'t';
@@ -2573,12 +2622,12 @@ function tryAdvanceToProjectPlan() {
       'Continue anyway',
       () => {
         document.getElementById('confirmClearModal')?.classList.remove('open');
-        switchPhase('pm');
+        switchPhase(destPhase);
       }
     );
     return;
   }
-  switchPhase('pm');
+  switchPhase(destPhase);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2634,6 +2683,15 @@ function saveCheckinGoalText() {
 let checkinStep = 'evidence';
 
 function startCheckinGoalWizard(idx) {
+  // Clear checkinStep BEFORE moving activeGoalIdx. goToCheckinStep() saves
+  // whatever step we're "leaving" using the CURRENT activeGoalIdx — if we
+  // moved activeGoalIdx first, that save would look like it's leaving the
+  // new goal's roles/evidence step, and write the previous goal's still-
+  // on-screen field values into the new goal's data. (This was a real bug:
+  // finishing goal 1's Roles step and moving to goal 2 was copying goal 1's
+  // roles into goal 2, because the goal switch happened before the "leaving
+  // roles" save's target goal was still correct.)
+  checkinStep = null;
   activeGoalIdx = idx;
   goToCheckinStep('evidence');
 }
@@ -2660,7 +2718,7 @@ function goToCheckinStep(step) {
     document.getElementById('checkinGoalReadoutRoles').textContent = label;
     renderCheckinRoles();
     const doneBtn = document.getElementById('checkinRolesDoneBtn');
-    if (doneBtn) doneBtn.textContent = (activeGoalIdx < goalCount - 1) ? 'Next goal →' : 'Done — back to your goals →';
+    if (doneBtn) doneBtn.textContent = (activeGoalIdx < goalCount - 1) ? 'Next goal →' : 'Done — see your Project Plan →';
   }
 }
 
@@ -2669,7 +2727,11 @@ function finishCheckinGoal() {
   if (activeGoalIdx < goals.length - 1) {
     startCheckinGoalWizard(activeGoalIdx + 1);
   } else {
-    backToCheckinSummary();
+    // Finishing the last goal's wizard should land the team on their Team
+    // Project Plan close-out, not back on the Review Goals list — that list
+    // reads like a repeat of the Kickoff step they already did, and there's
+    // nothing left for them to do there once every goal is done.
+    tryAdvanceToProjectPlan();
   }
 }
 
@@ -2711,9 +2773,10 @@ function saveCheckinRolesStep() {
   if (!g) return;
   const roleRows = document.querySelectorAll('#checkinRolesTable tr');
   g.roles = Array.from(roleRows).map(row => {
-    const inputs = row.querySelectorAll('input');
+    const nameInput = row.querySelector('input.role-name-input');
+    const respInput = row.querySelector('input.role-resp-input');
     const whenSelect = row.querySelector('select.role-when-select');
-    return { name: inputs[0]?.value || '', responsibility: inputs[1]?.value || '', byWhen: whenSelect?.value || '' };
+    return { name: nameInput?.value || '', responsibility: respInput?.value || '', byWhen: whenSelect?.value || '' };
   }).filter(r => r.name.trim() || r.responsibility.trim());
   persistGoals();
 }
@@ -2809,13 +2872,19 @@ function renderCheckinAddedEvidence(g) {
     </div>`).join('');
 }
 
+// Task/action first, then who, then when — per Brittany's review feedback.
+// The read/save logic below is keyed by CSS class (role-name-input,
+// role-resp-input, role-when-select), not column position, specifically so
+// column reordering like this can never again silently swap which field's
+// data lands in which slot (this app already hit that exact class of bug
+// once, in the wizard's cross-goal-copy issue — never again by index).
 function renderCheckinRoles() {
   const g = goals[activeGoalIdx];
   const tbody = document.getElementById('checkinRolesTable');
   const roles = (g.roles && g.roles.length) ? g.roles : [{name:'',responsibility:'',byWhen:''}];
   tbody.innerHTML = roles.map(r => `<tr>
-    <td><input type="text" value="${(r.name||'').replace(/"/g,'&quot;')}" placeholder="Name" list="memberDatalist" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td>
-    <td><input type="text" value="${(r.responsibility||'').replace(/"/g,'&quot;')}" placeholder="What are they responsible for?" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td>
+    <td><input type="text" class="role-resp-input" value="${(r.responsibility||'').replace(/"/g,'&quot;')}" placeholder="What needs to happen?" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td>
+    <td><input type="text" class="role-name-input" value="${(r.name||'').replace(/"/g,'&quot;')}" placeholder="Who" list="memberDatalist" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td>
     <td><select class="role-when-select" onchange="saveCheckinGoal()">
       <option value="" ${!r.byWhen ? 'selected' : ''}>Choose…</option>
       ${roleWhenOptionsHtml(r.byWhen)}
@@ -2828,7 +2897,7 @@ function addCheckinRoleRow() {
   saveCheckinGoal();
   const tbody = document.getElementById('checkinRolesTable');
   const row = document.createElement('tr');
-  row.innerHTML = `<td><input type="text" placeholder="Name" list="memberDatalist" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td><td><select class="role-when-select" onchange="saveCheckinGoal()"><option value="" selected>Choose…</option>${roleWhenOptionsHtml('')}</select></td><td><button class="role-del-btn" onclick="removeCheckinRoleRow(this)" title="Remove">×</button></td>`;
+  row.innerHTML = `<td><input type="text" class="role-resp-input" placeholder="What needs to happen?" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td><td><input type="text" class="role-name-input" placeholder="Who" list="memberDatalist" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td><td><select class="role-when-select" onchange="saveCheckinGoal()"><option value="" selected>Choose…</option>${roleWhenOptionsHtml('')}</select></td><td><button class="role-del-btn" onclick="removeCheckinRoleRow(this)" title="Remove">×</button></td>`;
   tbody.appendChild(row);
 }
 
@@ -3774,6 +3843,10 @@ function deleteRoleRow(btn) {
   update();
 }
 
+// Task/action first, then who, then when — per Brittany's review feedback.
+// Read/save logic is keyed by CSS class (role-resp-input, role-name-input,
+// role-when-select), not column position — see the matching note on the
+// check-in version of these functions for why.
 function restoreRolesTable(roles) {
   const tbody = document.getElementById('rolesTable');
   if (!tbody) return;
@@ -3783,8 +3856,8 @@ function restoreRolesTable(roles) {
   // Pad with one extra blank row at the end for easy entry
   if (populated.length > 0) rows.push({name:'',responsibility:'',byWhen:''});
   tbody.innerHTML = rows.map(r => `<tr>
-    <td><input type="text" value="${(r.name||'').replace(/"/g,'&quot;')}" placeholder="Select or type name-" list="memberDatalist" oninput="update()" /></td>
-    <td><input type="text" value="${(r.responsibility||'').replace(/"/g,'&quot;')}" placeholder="What are they responsible for?" oninput="update()" /></td>
+    <td><input type="text" class="role-resp-input" value="${(r.responsibility||'').replace(/"/g,'&quot;')}" placeholder="What needs to happen?" oninput="update()" /></td>
+    <td><input type="text" class="role-name-input" value="${(r.name||'').replace(/"/g,'&quot;')}" placeholder="Who" list="memberDatalist" oninput="update()" /></td>
     <td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" ${!r.byWhen ? 'selected' : ''}>Choose…</option>${roleWhenOptionsHtml(r.byWhen)}</select></td>
     <td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>
   </tr>`).join('');
@@ -3793,7 +3866,7 @@ function restoreRolesTable(roles) {
 function addRoleRow() {
   const tbody = document.getElementById('rolesTable');
   const row = document.createElement('tr');
-  row.innerHTML = `<td><input type="text" placeholder="Select or type name-" list="memberDatalist" oninput="update()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="update()" /></td><td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" selected>Choose…</option>${roleWhenOptionsHtml('')}</select></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>`;
+  row.innerHTML = `<td><input type="text" class="role-resp-input" placeholder="What needs to happen?" oninput="update()" /></td><td><input type="text" class="role-name-input" placeholder="Who" list="memberDatalist" oninput="update()" /></td><td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" selected>Choose…</option>${roleWhenOptionsHtml('')}</select></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>`;
   tbody.appendChild(row);
   update();
 }
@@ -3803,11 +3876,12 @@ function sortRolesTable() {
   const rows = Array.from(tbody.querySelectorAll('tr'));
 
   const rowData = rows.map(row => {
-    const inputs = row.querySelectorAll('input');
+    const nameInput = row.querySelector('input.role-name-input');
+    const respInput = row.querySelector('input.role-resp-input');
     const whenSelect = row.querySelector('select.role-when-select');
     return {
-      name: inputs[0]?.value || '',
-      resp: inputs[1]?.value || '',
+      name: nameInput?.value || '',
+      resp: respInput?.value || '',
       when: whenSelect?.value || '',
     };
   });
@@ -3822,8 +3896,8 @@ function sortRolesTable() {
 
   tbody.innerHTML = rowData.map(r =>
     `<tr>
-      <td><input type="text" value="${r.name.replace(/"/g,'&quot;')}" placeholder="Select or type name-" list="memberDatalist" oninput="update()" /></td>
-      <td><input type="text" value="${r.resp.replace(/"/g,'&quot;')}" placeholder="What are they responsible for?" oninput="update()" /></td>
+      <td><input type="text" class="role-resp-input" value="${r.resp.replace(/"/g,'&quot;')}" placeholder="What needs to happen?" oninput="update()" /></td>
+      <td><input type="text" class="role-name-input" value="${r.name.replace(/"/g,'&quot;')}" placeholder="Who" list="memberDatalist" oninput="update()" /></td>
       <td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" ${!r.when ? 'selected' : ''}>Choose…</option>${roleWhenOptionsHtml(r.when)}</select></td>
       <td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">-</button></td>
     </tr>`
@@ -3845,8 +3919,9 @@ function autoPopulateRoles() {
   const tbody = document.getElementById('rolesTable');
   if (!tbody) return;
   const existingFilled = Array.from(tbody.querySelectorAll('tr')).filter(row => {
-    const inputs = row.querySelectorAll('input');
-    return inputs[0]?.value.trim() || inputs[1]?.value.trim();
+    const nameInput = row.querySelector('input.role-name-input');
+    const respInput = row.querySelector('input.role-resp-input');
+    return nameInput?.value.trim() || respInput?.value.trim();
   });
   if (existingFilled.length > 0) {
     // Table already has real content — just show the hint label
@@ -3876,15 +3951,15 @@ function autoPopulateRoles() {
 
   // Render into table — pre-filled responsibility + when, name left blank for team to assign
   tbody.innerHTML = unique.map(r => `<tr>
-    <td><input type="text" value="" placeholder="Assign a name…" list="memberDatalist" oninput="update()" /></td>
-    <td><input type="text" value="${r.resp.replace(/"/g,'&quot;')}" placeholder="What are they responsible for?" oninput="update()" /></td>
+    <td><input type="text" class="role-resp-input" value="${r.resp.replace(/"/g,'&quot;')}" placeholder="What needs to happen?" oninput="update()" /></td>
+    <td><input type="text" class="role-name-input" value="" placeholder="Assign a name…" list="memberDatalist" oninput="update()" /></td>
     <td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" ${!r.when ? 'selected' : ''}>Choose…</option>${roleWhenOptionsHtml(r.when)}</select></td>
     <td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">×</button></td>
   </tr>`).join('');
 
   // Always append one blank row for easy additional entry
   const blankRow = document.createElement('tr');
-  blankRow.innerHTML = `<td><input type="text" placeholder="Add another name…" list="memberDatalist" oninput="update()" /></td><td><input type="text" placeholder="What are they responsible for?" oninput="update()" /></td><td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" selected>Choose…</option>${roleWhenOptionsHtml('')}</select></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">×</button></td>`;
+  blankRow.innerHTML = `<td><input type="text" class="role-resp-input" placeholder="What needs to happen?" oninput="update()" /></td><td><input type="text" class="role-name-input" placeholder="Add another name…" list="memberDatalist" oninput="update()" /></td><td><select class="role-when-select" onchange="sortRolesTable();update()"><option value="" selected>Choose…</option>${roleWhenOptionsHtml('')}</select></td><td><button class="role-del-btn" onclick="deleteRoleRow(this)" title="Remove">×</button></td>`;
   tbody.appendChild(blankRow);
 
   update();
@@ -4051,11 +4126,12 @@ function update() {
 function getFormData() {
   const roleRows = Array.from(document.querySelectorAll('#rolesTable tr'));
   const roles = roleRows.map(row => {
-    const inputs = row.querySelectorAll('input[type=text]');
+    const nameInput = row.querySelector('input.role-name-input');
+    const respInput = row.querySelector('input.role-resp-input');
     const whenSelect = row.querySelector('select.role-when-select');
     return {
-      name: inputs[0]?.value.trim() || '',
-      responsibility: inputs[1]?.value.trim() || '',
+      name: nameInput?.value.trim() || '',
+      responsibility: respInput?.value.trim() || '',
       byWhen: whenSelect?.value.trim() || '',
     };
   });
