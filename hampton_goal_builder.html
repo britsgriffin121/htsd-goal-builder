@@ -1928,6 +1928,13 @@ function docxTextBlock(text) {
   return (text || '').split('\n').map(line => docxParagraph(line)).join('');
 }
 
+// Forces the next content onto a new printed page -- used to give each
+// person's task list its own page so a printed copy can be cut/handed out
+// to just that person.
+function docxPageBreak() {
+  return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+}
+
 // Simple table: header row (bold) + data rows. widthsPct sums to ~100.
 function docxTable(headers, rows, widthsPct) {
   const totalTwips = 9360; // usable width at default margins, in twips
@@ -1971,11 +1978,12 @@ function buildTeamPlanDocxParagraphs() {
     parts.push(docxParagraph('No goals recorded yet.', { italic: true }));
   }
   validGoals.forEach((g, i) => {
-    const goalLabel = g.goalNickname || g.teamGoal || g.specificOutcome || `Goal ${i + 1}`;
+    // Use the FULL goal language in the heading, not the truncated
+    // goalNickname (a raw 30-char slice with no ellipsis for spring-carried
+    // goals) -- same fix as the on-screen Cross-Goal Timeline. Only fall
+    // back to goalNickname/specificOutcome when there's no teamGoal at all.
+    const goalLabel = g.teamGoal || g.goalNickname || g.specificOutcome || `Goal ${i + 1}`;
     parts.push(docxParagraph(`Goal ${i + 1}: ${goalLabel}`, { heading: 2, spaceBefore: 320 }));
-    if (g.teamGoal && g.teamGoal !== goalLabel) {
-      parts.push(docxParagraph(g.teamGoal));
-    }
 
     const evidenceItems = (g.evidenceItems || []).filter(e => e.text && e.text.trim());
     if (evidenceItems.length) {
@@ -2045,6 +2053,48 @@ function buildTeamPlanDocxParagraphs() {
     parts.push(docxTable(['Task', 'Who', 'Due'], dueFlatTasks.map(t => t.row), [55, 25, 20]));
   } else {
     parts.push(docxParagraph('No tasks marked due before November yet.', { italic: true }));
+  }
+
+  // ── Section 6: Per-Person Task Lists ──
+  // Same grouping as the on-screen "Who's Doing What" cards and the PDF
+  // export's per-person pages (personMap pattern) -- everyone's full list
+  // of cross-goal and per-goal responsibilities, in one place they can find
+  // just their own name. Each person starts on a fresh page so this section
+  // can be printed and cut apart / handed out to the right people.
+  const personMapDocx = {};
+  validGoals.forEach((g, gi) => {
+    (g.roles || []).forEach(r => {
+      if (!r.name || !r.responsibility) return;
+      namesForRoleAssignment(r.name).forEach(person => {
+        if (!personMapDocx[person]) personMapDocx[person] = { crossGoal: [], goalTasks: [] };
+        personMapDocx[person].goalTasks.push({ goalIdx: gi, responsibility: r.responsibility, byWhen: r.byWhen || '' });
+      });
+    });
+  });
+  (pmData?.crossGoalRoles || []).forEach(r => {
+    if (!r.name || !r.responsibility) return;
+    namesForRoleAssignment(r.name).forEach(person => {
+      if (!personMapDocx[person]) personMapDocx[person] = { crossGoal: [], goalTasks: [] };
+      personMapDocx[person].crossGoal.push({ responsibility: r.responsibility, cadence: r.cadence || '' });
+    });
+  });
+  const peopleDocx = Object.keys(personMapDocx);
+  if (peopleDocx.length) {
+    parts.push(docxPageBreak());
+    parts.push(docxParagraph('Per-Person Task Lists', { heading: 1, spaceBefore: 0 }));
+    parts.push(docxParagraph('Print this section and hand each page to the person named at the top.', { italic: true, size: 20, color: '666666' }));
+    peopleDocx.forEach((person, pi) => {
+      parts.push(docxPageBreak());
+      parts.push(docxParagraph(person, { heading: 1, spaceBefore: 0 }));
+      const rows = [];
+      personMapDocx[person].crossGoal.forEach(t => rows.push(['All goals', t.responsibility, t.cadence || '—']));
+      personMapDocx[person].goalTasks.forEach(t => rows.push([`Goal ${t.goalIdx + 1}`, t.responsibility, t.byWhen || '—']));
+      if (rows.length) {
+        parts.push(docxTable(['Goal', 'Responsibility', 'Due'], rows, [20, 55, 25]));
+      } else {
+        parts.push(docxParagraph('No responsibilities assigned yet.', { italic: true }));
+      }
+    });
   }
 
   return parts.join('');
@@ -3323,6 +3373,24 @@ function startCheckinGoalWizard(idx) {
   goToCheckinStep('evidence');
 }
 
+// Auto-generate the "Collect Evidence: <text>" responsibility for any
+// evidence item that has both text and a collection month but no matching
+// role row yet. Defaults Who to "All Design Team Members" so it shows on
+// everyone's task list until the team reassigns it to one person. Safe to
+// call repeatedly -- only adds rows for evidence items not already covered.
+function seedEvidenceCollectionTasks(g) {
+  if (!g) return;
+  g.roles = g.roles || [];
+  const existingResp = new Set(g.roles.map(r => (r.responsibility || '').trim()));
+  (g.evidenceItems || []).forEach(e => {
+    if (!e.text || !e.text.trim() || !e.collectMonth) return;
+    const taskName = `Collect Evidence: ${e.text.trim()}`;
+    if (existingResp.has(taskName)) return;
+    g.roles.push({ name: ALL_TEAM_SENTINEL, responsibility: taskName, byWhen: e.collectMonth });
+    existingResp.add(taskName);
+  });
+}
+
 function goToCheckinStep(step) {
   // Persist whatever step we're leaving before painting the next one.
   if (checkinStep === 'evidence') saveCheckinEvidenceStep();
@@ -3409,6 +3477,11 @@ function saveCheckinEvidenceStep() {
     benchmark: el.querySelector('.ev-benchmark-input')?.value || '',
     collectMonth: el.querySelector('.ev-collect-month')?.value || ''
   })).filter(e => e.text.trim());
+  // Every time evidence is saved (whether the team moves on to Roles, hits
+  // Back, or jumps to full edit), make sure each item with a collection
+  // month has a matching "Collect Evidence" task -- covers all the ways a
+  // team can leave this step, not just the Evidence -> Roles button.
+  seedEvidenceCollectionTasks(g);
   persistGoals();
 }
 
