@@ -2443,6 +2443,16 @@ function initPmData() {
   }
   // Ensure checkpointDates exists for older saved data
   if (!pmData.checkpointDates) pmData.checkpointDates = {Sep:'',Nov:'',Jan:'',Mar:'',May:''};
+  // Backfill: if this team's Sep date is still blank -- e.g. pmData was
+  // saved before the pre-fill above existed, so the "brand-new pmData"
+  // branch never ran for them -- fill it in from TEAM_MEETING_DAY now.
+  // Still never overwrites a real (non-empty) date a team entered or the
+  // pre-fill already set.
+  if (document.body.classList.contains('checkin-mode') && !pmData.checkpointDates.Sep) {
+    const teamNameBackfill = localStorage.getItem('htsd_checkin_team') || '';
+    const meetingDayBackfill = TEAM_MEETING_DAY[teamNameBackfill];
+    if (meetingDayBackfill) pmData.checkpointDates.Sep = meetingDayBackfill;
+  }
   // Migrate old byWhen to cadence if needed, and fix any incorrectly migrated values
   const CADENCE_MAP = {
     'Facilitate design team meetings and track progress': 'Ongoing',
