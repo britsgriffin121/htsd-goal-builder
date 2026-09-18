@@ -2146,7 +2146,10 @@ function buildTeamPlanDocxParagraphs() {
     parts.push(docxParagraph('No responsibilities assigned yet.', { italic: true, spaceBefore: 160 }));
   } else {
     peopleDocx.forEach((person, pi) => {
-      parts.push(docxPageBreak());
+      // The section intro (bar + instructions) already starts its own page
+      // above -- only break to a new page BETWEEN people, not before the
+      // first one, or the intro ends up alone on a page by itself.
+      if (pi > 0) parts.push(docxPageBreak());
       const pc = DOCX_GOAL_COLORS[pi % DOCX_GOAL_COLORS.length];
       parts.push(docxParagraph(person, { bold: true, size: 30, leftBorder: pc, spaceAfter: 160 }));
       const rows = [];
@@ -2170,9 +2173,18 @@ function buildTeamPlanDocxParagraphs() {
   parts.push(docxParagraph('The agenda and tasks below are what your team needs for its next check-in.', { italic: true, size: 20, color: '666666' }));
 
   // ── Section 5: November Agenda (the editable draft, as-is on export) ──
+  // The agenda text's own first line is a title like "<team> — November
+  // Check-In Agenda" (see buildNovAgendaText/the on-screen textarea, where
+  // that line is intentional) -- strip it here so it doesn't repeat right
+  // under the colored section bar, which already says the same thing.
+  const agendaLines = agendaText.split('\n');
+  const agendaTitleRe = /november check-?in agenda/i;
+  const agendaBodyText = agendaTitleRe.test(agendaLines[0] || '')
+    ? agendaLines.slice(1).join('\n')
+    : agendaText;
   parts.push(docxPageBreak());
   parts.push(docxSectionBar('November Check-In Agenda', DOCX_NAVY));
-  parts.push(docxTextBlock(agendaText));
+  parts.push(docxTextBlock(agendaBodyText.replace(/^\n+/, '')));
 
   // ── Section 6: Tasks Due Before November ──
   // Uses resolveDueDisplay (same helper as the on-screen close-out list) so
