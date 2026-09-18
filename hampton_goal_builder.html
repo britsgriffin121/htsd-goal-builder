@@ -1708,14 +1708,18 @@ function renderCheckinPersonTaskLists() {
   goals.forEach((g, gi) => {
     (g.roles || []).forEach(r => {
       if (!r.name || !r.responsibility) return;
-      if (!personMap[r.name]) personMap[r.name] = { crossGoal: [], goalTasks: [] };
-      personMap[r.name].goalTasks.push({ goalIdx: gi, goal: g, responsibility: r.responsibility, byWhen: r.byWhen || '' });
+      namesForRoleAssignment(r.name).forEach(person => {
+        if (!personMap[person]) personMap[person] = { crossGoal: [], goalTasks: [] };
+        personMap[person].goalTasks.push({ goalIdx: gi, goal: g, responsibility: r.responsibility, byWhen: r.byWhen || '' });
+      });
     });
   });
   (pmData?.crossGoalRoles || []).forEach(r => {
     if (!r.name || !r.responsibility) return;
-    if (!personMap[r.name]) personMap[r.name] = { crossGoal: [], goalTasks: [] };
-    personMap[r.name].crossGoal.push({ responsibility: r.responsibility, cadence: r.cadence || '' });
+    namesForRoleAssignment(r.name).forEach(person => {
+      if (!personMap[person]) personMap[person] = { crossGoal: [], goalTasks: [] };
+      personMap[person].crossGoal.push({ responsibility: r.responsibility, cadence: r.cadence || '' });
+    });
   });
 
   const people = Object.keys(personMap);
@@ -2830,12 +2834,42 @@ function removeGoal(idx) {
   );
 }
 
-function updateMemberDropdowns() {
+// Special "Who" value meaning "this task belongs to the whole team", not
+// one person -- Brittany, 2026-09-18: for a task like "everyone reviews
+// evidence before the meeting", typing individual names one row at a time
+// (or picking a true multi-select) is overkill. Selecting this instead
+// means the task shows up on every real team member's own to-do list
+// (see namesForRoleAssignment below), while still being stored as one
+// plain string, so none of the single-name assumptions elsewhere in the
+// file (exports, sorting, due-date lists) need to change.
+const ALL_TEAM_SENTINEL = 'All Design Team Members';
+
+function getTeamMemberNames() {
   const raw = document.getElementById('launchTeamMembers')?.value
     || getLaunchIdentity().teamLead || '';
-  const names = raw.split(',').map(n=>n.trim()).filter(Boolean);
+  return raw.split(',').map(n=>n.trim()).filter(Boolean);
+}
+
+// Expands a role's stored "Who" name into the list of real people it
+// actually applies to -- a real name maps to itself; ALL_TEAM_SENTINEL
+// fans out to every current team member, so a per-person task list (the
+// close-out's Tasks by Person, and the PDF's per-person pages) puts this
+// task on everyone's list instead of showing "All Design Team Members" as
+// if it were a literal person. A flat table (Cross-Goal Responsibilities,
+// Tasks Due Before November) doesn't need this -- showing the sentinel text
+// itself in a Who column reads fine there.
+function namesForRoleAssignment(name) {
+  if (name === ALL_TEAM_SENTINEL) {
+    const everyone = getTeamMemberNames();
+    return everyone.length ? everyone : [name];
+  }
+  return name ? [name] : [];
+}
+
+function updateMemberDropdowns() {
+  const names = getTeamMemberNames();
   const dl = document.getElementById('memberDatalist');
-  if (dl) dl.innerHTML = names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}"></option>`).join('');
+  if (dl) dl.innerHTML = [ALL_TEAM_SENTINEL, ...names].map(n=>`<option value="${n.replace(/"/g,'&quot;')}"></option>`).join('');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -5502,15 +5536,19 @@ function runExportAllGoalsPDF() {
     allGoals.forEach((g, gi) => {
       (g.roles||[]).forEach(r => {
         if (!r.name || !r.responsibility) return;
-        if (!personMap[r.name]) personMap[r.name] = { crossGoal: [], goalTasks: [] };
-        personMap[r.name].goalTasks.push({ goalIdx: gi, goal: g, responsibility: r.responsibility, byWhen: r.byWhen||'' });
+        namesForRoleAssignment(r.name).forEach(person => {
+          if (!personMap[person]) personMap[person] = { crossGoal: [], goalTasks: [] };
+          personMap[person].goalTasks.push({ goalIdx: gi, goal: g, responsibility: r.responsibility, byWhen: r.byWhen||'' });
+        });
       });
     });
     // Add cross-goal responsibilities
     (pmData?.crossGoalRoles||[]).forEach(r => {
       if (!r.name || !r.responsibility) return;
-      if (!personMap[r.name]) personMap[r.name] = { crossGoal: [], goalTasks: [] };
-      personMap[r.name].crossGoal.push({ responsibility: r.responsibility, cadence: r.cadence || r.byWhen || '', byWhen: r.cadence || r.byWhen || '' });
+      namesForRoleAssignment(r.name).forEach(person => {
+        if (!personMap[person]) personMap[person] = { crossGoal: [], goalTasks: [] };
+        personMap[person].crossGoal.push({ responsibility: r.responsibility, cadence: r.cadence || r.byWhen || '', byWhen: r.cadence || r.byWhen || '' });
+      });
     });
 
     const PERSON_COLORS = [NAVY, TEAL, PINK, [25,211,197], [53,53,53]];
