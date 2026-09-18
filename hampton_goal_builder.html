@@ -2139,6 +2139,16 @@ function initPmData() {
       crossGoalRoles: PM_DEFAULT_ROLES.map(r => ({...r})),
       checkpointDates: {Sep:'',Nov:'',Jan:'',Mar:'',May:''},
     };
+    // Pre-fill the Sep (Baselines & Norms) checkpoint with this team's real
+    // fall meeting date, so the timeline shows 9/29 or 9/30 instead of a
+    // blank field. Only applies to brand-new pmData for a team in check-in
+    // mode, and only when a known team maps to a date — never overwrites
+    // existing saved data, and Summer mode (no team scoping) is unaffected.
+    if (document.body.classList.contains('checkin-mode')) {
+      const teamName = localStorage.getItem('htsd_checkin_team') || '';
+      const meetingDay = TEAM_MEETING_DAY[teamName];
+      if (meetingDay) pmData.checkpointDates.Sep = meetingDay;
+    }
   }
   // Ensure checkpointDates exists for older saved data
   if (!pmData.checkpointDates) pmData.checkpointDates = {Sep:'',Nov:'',Jan:'',Mar:'',May:''};
@@ -3317,6 +3327,19 @@ const TEAM_ROSTERS = {
     members: ["Courtenay Garrett","Amy Rein","Dina Dunmire","Erin Prosser"],
     lead: "Dr. Cable"
   }
+};
+
+// Confirmed Sept 29-30, 2026 fall design-team meeting schedule (from
+// Brittany's team roster doc): Central, HMS, and HHS meet 9/29; Wyland and
+// Poff meet 9/30. Used to pre-fill the Baselines & Norms (Sep) checkpoint
+// date on the Cross-Goal Responsibilities / Meeting Cadence timeline so
+// each team sees their actual meeting date instead of a blank field.
+const TEAM_MEETING_DAY = {
+  "Hampton High School (HHS)": "2026-09-29",
+  "Central Elementary": "2026-09-29",
+  "Hampton Middle School (HMS)": "2026-09-29",
+  "Wyland Elementary": "2026-09-30",
+  "Poff Elementary": "2026-09-30"
 };
 
 const OUTCOMES = {
