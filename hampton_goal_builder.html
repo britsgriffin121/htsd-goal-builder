@@ -2023,6 +2023,7 @@ function buildTeamPlanDocxParagraphs() {
   const exportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const textarea = document.getElementById('checkinNovAgendaText');
   const agendaText = textarea ? textarea.value : buildNovAgendaText();
+  const validGoals = goals.filter(g => g.teamGoal || g.specificOutcome || g.selectedGoalNum);
 
   const parts = [];
   // Title block -- the navy header band with the Hampton logo (added at
@@ -2032,14 +2033,42 @@ function buildTeamPlanDocxParagraphs() {
   parts.push(docxParagraph(`${teamName} — Team Project Plan`, { bold: true, size: 32, color: DOCX_NAVY, spaceAfter: 40 }));
   parts.push(docxParagraph(`${schoolYear} · Exported ${exportDate}`, { italic: true, size: 20, color: '666666', spaceAfter: 200 }));
 
-  // ── Section 1: November Agenda (the editable draft, as-is on export) ──
-  parts.push(docxSectionBar('November Check-In Agenda', DOCX_NAVY));
-  parts.push(docxTextBlock(agendaText));
+  // ── Section 1: Goal Summary ──
+  // A quick-scan list of every goal -- same idea as the PDF export's
+  // Overview section (colored goal badge + full goal statement, one row
+  // per goal) -- so a reader gets the whole plan at a glance before the
+  // deep dive later in the doc.
+  parts.push(docxSectionBar('Goal Summary', DOCX_NAVY));
+  if (!validGoals.length) {
+    parts.push(docxParagraph('No goals recorded yet.', { italic: true, spaceBefore: 160 }));
+  } else {
+    parts.push(docxTable(
+      ['Goal', 'Statement'],
+      validGoals.map((g, i) => [
+        `Goal ${i + 1}`,
+        g.teamGoal || g.goalNickname || g.specificOutcome || `Goal ${i + 1} (not yet written)`
+      ]),
+      [15, 85],
+      DOCX_NAVY
+    ));
+  }
 
-  // ── Section 2: Per-goal detail ──
+  // ── Section 2: Meeting Cadence ──
   parts.push(docxParagraph(' ', { spaceBefore: 200 }));
-  parts.push(docxSectionBar('Goals & Plans', DOCX_NAVY));
-  const validGoals = goals.filter(g => g.teamGoal || g.specificOutcome || g.selectedGoalNum);
+  parts.push(docxSectionBar('Meeting Cadence', DOCX_NAVY));
+  const cadenceRows = PM_CHECKPOINT_MONTHS.map(mo => [
+    mo,
+    PM_CHECKPOINT_SHORT[mo] || mo,
+    PM_CHECKPOINT_TBD[mo] ? PM_TBD_DATE_LABEL : ((pmData?.checkpointDates?.[mo] || '').trim() || 'Not yet set')
+  ]);
+  parts.push(docxTable(['Month', 'Focus', 'Date'], cadenceRows, [20, 45, 35], DOCX_NAVY));
+
+  // ── Section 3: Goals & Plans Deep Dive ──
+  // Starts on its own page -- the Goal Summary above already gave the
+  // reader the at-a-glance version, so this is a deliberate "now we're
+  // zooming in" moment.
+  parts.push(docxPageBreak());
+  parts.push(docxSectionBar('Goals & Plans Deep Dive', DOCX_NAVY));
   if (!validGoals.length) {
     parts.push(docxParagraph('No goals recorded yet.', { italic: true, spaceBefore: 160 }));
   }
@@ -2082,32 +2111,70 @@ function buildTeamPlanDocxParagraphs() {
     }
   });
 
-  // ── Section 3: Cross-Goal Responsibilities ──
-  const crossGoalRoles = (pmData?.crossGoalRoles || []).filter(r => r.name || r.responsibility);
-  parts.push(docxParagraph(' ', { spaceBefore: 200 }));
-  parts.push(docxSectionBar('Cross-Goal Responsibilities', DOCX_PINK));
-  if (crossGoalRoles.length) {
-    parts.push(docxTable(
-      ['Who', 'Responsibility', 'Cadence'],
-      crossGoalRoles.map(r => [r.name || 'Unassigned', r.responsibility || '—', r.cadence || '—']),
-      [20, 55, 25],
-      DOCX_PINK
-    ));
+  // ── Section 4: Per-Person Task Lists ──
+  // Same grouping as the on-screen "Who's Doing What" cards and the PDF
+  // export's per-person pages (personMap pattern) -- everyone's full list
+  // of cross-goal AND per-goal responsibilities on one page, in one place
+  // they can find just their own name. There's no separate "All Design
+  // Team Members" page -- a task assigned to everyone is fanned out via
+  // namesForRoleAssignment() and folded directly into each person's own
+  // list instead, so nobody has to cross-reference a shared page to find
+  // their whole-team tasks. Each person starts on a fresh page so this
+  // section can be printed and cut apart / handed out to the right people.
+  parts.push(docxPageBreak());
+  parts.push(docxSectionBar('Per-Person Task Lists', DOCX_NAVY));
+  parts.push(docxParagraph('Print this section and hand each page to the person named at the top.', { italic: true, size: 20, color: '666666', spaceBefore: 120 }));
+  const personMapDocx = {};
+  validGoals.forEach((g, gi) => {
+    (g.roles || []).forEach(r => {
+      if (!r.name || !r.responsibility) return;
+      namesForRoleAssignment(r.name).forEach(person => {
+        if (!personMapDocx[person]) personMapDocx[person] = { crossGoal: [], goalTasks: [] };
+        personMapDocx[person].goalTasks.push({ goalIdx: gi, responsibility: r.responsibility, byWhen: r.byWhen || '' });
+      });
+    });
+  });
+  (pmData?.crossGoalRoles || []).forEach(r => {
+    if (!r.name || !r.responsibility) return;
+    namesForRoleAssignment(r.name).forEach(person => {
+      if (!personMapDocx[person]) personMapDocx[person] = { crossGoal: [], goalTasks: [] };
+      personMapDocx[person].crossGoal.push({ responsibility: r.responsibility, cadence: r.cadence || '' });
+    });
+  });
+  const peopleDocx = Object.keys(personMapDocx);
+  if (!peopleDocx.length) {
+    parts.push(docxParagraph('No responsibilities assigned yet.', { italic: true, spaceBefore: 160 }));
   } else {
-    parts.push(docxParagraph('No cross-goal responsibilities assigned yet.', { italic: true, spaceBefore: 160 }));
+    peopleDocx.forEach((person, pi) => {
+      parts.push(docxPageBreak());
+      const pc = DOCX_GOAL_COLORS[pi % DOCX_GOAL_COLORS.length];
+      parts.push(docxParagraph(person, { bold: true, size: 30, leftBorder: pc, spaceAfter: 160 }));
+      const rows = [];
+      personMapDocx[person].crossGoal.forEach(t => rows.push(['All goals', t.responsibility, t.cadence || '—']));
+      personMapDocx[person].goalTasks.forEach(t => rows.push([`Goal ${t.goalIdx + 1}`, t.responsibility, t.byWhen || '—']));
+      if (rows.length) {
+        parts.push(docxTable(['Goal', 'Responsibility', 'Due'], rows, [20, 55, 25], pc));
+      } else {
+        parts.push(docxParagraph('No responsibilities assigned yet.', { italic: true }));
+      }
+    });
   }
 
-  // ── Section 4: Meeting Cadence ──
-  parts.push(docxParagraph(' ', { spaceBefore: 200 }));
-  parts.push(docxSectionBar('Meeting Cadence', DOCX_NAVY));
-  const cadenceRows = PM_CHECKPOINT_MONTHS.map(mo => [
-    mo,
-    PM_CHECKPOINT_SHORT[mo] || mo,
-    PM_CHECKPOINT_TBD[mo] ? PM_TBD_DATE_LABEL : ((pmData?.checkpointDates?.[mo] || '').trim() || 'Not yet set')
-  ]);
-  parts.push(docxTable(['Month', 'Focus', 'Date'], cadenceRows, [20, 45, 35], DOCX_NAVY));
+  // ── Divider: zooming in on November ──
+  // A dedicated divider page marks the shift from "the whole-year plan"
+  // above to "what's happening at your next meeting" below.
+  parts.push(docxPageBreak());
+  parts.push(docxParagraph(' ', { spaceBefore: 1600 }));
+  parts.push(docxParagraph('COMING UP', { bold: true, color: '999999', caps: true, size: 18, spaceAfter: 40 }));
+  parts.push(docxParagraph('Your November Meeting', { bold: true, size: 40, color: DOCX_NAVY, spaceAfter: 80 }));
+  parts.push(docxParagraph('The agenda and tasks below are what your team needs for its next check-in.', { italic: true, size: 20, color: '666666' }));
 
-  // ── Section 5: Tasks Due Before November ──
+  // ── Section 5: November Agenda (the editable draft, as-is on export) ──
+  parts.push(docxPageBreak());
+  parts.push(docxSectionBar('November Check-In Agenda', DOCX_NAVY));
+  parts.push(docxTextBlock(agendaText));
+
+  // ── Section 6: Tasks Due Before November ──
   // Uses resolveDueDisplay (same helper as the on-screen close-out list) so
   // "Ongoing"/"Each checkpoint" responsibilities show a real due date here
   // too, once the team has set their November checkpoint date — the Word
@@ -2133,49 +2200,6 @@ function buildTeamPlanDocxParagraphs() {
     parts.push(docxTable(['Task', 'Who', 'Due'], dueFlatTasks.map(t => t.row), [55, 25, 20], DOCX_PINK));
   } else {
     parts.push(docxParagraph('No tasks marked due before November yet.', { italic: true, spaceBefore: 160 }));
-  }
-
-  // ── Section 6: Per-Person Task Lists ──
-  // Same grouping as the on-screen "Who's Doing What" cards and the PDF
-  // export's per-person pages (personMap pattern) -- everyone's full list
-  // of cross-goal and per-goal responsibilities, in one place they can find
-  // just their own name. Each person starts on a fresh page so this section
-  // can be printed and cut apart / handed out to the right people.
-  const personMapDocx = {};
-  validGoals.forEach((g, gi) => {
-    (g.roles || []).forEach(r => {
-      if (!r.name || !r.responsibility) return;
-      namesForRoleAssignment(r.name).forEach(person => {
-        if (!personMapDocx[person]) personMapDocx[person] = { crossGoal: [], goalTasks: [] };
-        personMapDocx[person].goalTasks.push({ goalIdx: gi, responsibility: r.responsibility, byWhen: r.byWhen || '' });
-      });
-    });
-  });
-  (pmData?.crossGoalRoles || []).forEach(r => {
-    if (!r.name || !r.responsibility) return;
-    namesForRoleAssignment(r.name).forEach(person => {
-      if (!personMapDocx[person]) personMapDocx[person] = { crossGoal: [], goalTasks: [] };
-      personMapDocx[person].crossGoal.push({ responsibility: r.responsibility, cadence: r.cadence || '' });
-    });
-  });
-  const peopleDocx = Object.keys(personMapDocx);
-  if (peopleDocx.length) {
-    parts.push(docxPageBreak());
-    parts.push(docxSectionBar('Per-Person Task Lists', DOCX_NAVY));
-    parts.push(docxParagraph('Print this section and hand each page to the person named at the top.', { italic: true, size: 20, color: '666666', spaceBefore: 120 }));
-    peopleDocx.forEach((person, pi) => {
-      parts.push(docxPageBreak());
-      const pc = DOCX_GOAL_COLORS[pi % DOCX_GOAL_COLORS.length];
-      parts.push(docxParagraph(person, { bold: true, size: 30, leftBorder: pc, spaceAfter: 160 }));
-      const rows = [];
-      personMapDocx[person].crossGoal.forEach(t => rows.push(['All goals', t.responsibility, t.cadence || '—']));
-      personMapDocx[person].goalTasks.forEach(t => rows.push([`Goal ${t.goalIdx + 1}`, t.responsibility, t.byWhen || '—']));
-      if (rows.length) {
-        parts.push(docxTable(['Goal', 'Responsibility', 'Due'], rows, [20, 55, 25], pc));
-      } else {
-        parts.push(docxParagraph('No responsibilities assigned yet.', { italic: true }));
-      }
-    });
   }
 
   return parts.join('');
