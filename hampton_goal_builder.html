@@ -1911,16 +1911,62 @@ function docxParagraph(text, opts) {
   const props = [];
   if (opts.heading === 1) props.push('<w:pStyle w:val="Heading1"/>');
   if (opts.heading === 2) props.push('<w:pStyle w:val="Heading2"/>');
-  if (opts.spaceBefore) props.push(`<w:spacing w:before="${opts.spaceBefore}"/>`);
+  if (opts.spaceBefore !== undefined) props.push(`<w:spacing w:before="${opts.spaceBefore}"${opts.spaceAfter !== undefined ? ` w:after="${opts.spaceAfter}"` : ''}/>`);
+  else if (opts.spaceAfter !== undefined) props.push(`<w:spacing w:after="${opts.spaceAfter}"/>`);
+  // Shaded background across the full paragraph width -- used for the
+  // colored section-header bars (navy/pink bands with white text), matching
+  // the PDF export's look.
+  if (opts.shade) props.push(`<w:shd w:val="clear" w:color="auto" w:fill="${opts.shade}"/>`);
+  // Left accent border -- used next to the goal statement, echoing the
+  // PDF's colored vertical bar beside each goal's text.
+  if (opts.leftBorder) props.push(`<w:pBdr><w:left w:val="single" w:sz="24" w:space="8" w:color="${opts.leftBorder}"/></w:pBdr><w:ind w:left="200"/>`);
+  if (opts.indent) props.push(`<w:ind w:left="${opts.indent}"/>`);
   const pPr = props.length ? `<w:pPr>${props.join('')}</w:pPr>` : '';
   const runProps = [];
   if (opts.bold) runProps.push('<w:b/>');
   if (opts.italic) runProps.push('<w:i/>');
   if (opts.size) runProps.push(`<w:sz w:val="${opts.size}"/>`);
   if (opts.color) runProps.push(`<w:color w:val="${opts.color}"/>`);
+  if (opts.caps) runProps.push('<w:caps/>');
   const rPr = runProps.length ? `<w:rPr>${runProps.join('')}</w:rPr>` : '';
   const safeText = escXml(text) || ' ';
   return `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${safeText}</w:t></w:r></w:p>`;
+}
+
+// A full-width colored bar with white bold caps text -- Word doesn't shade
+// a paragraph edge-to-edge reliably across renderers, so this uses a
+// single-cell table row instead (same trick the PDF export uses with solid
+// rects). Matches the PDF's navy/pink section header bands.
+function docxSectionBar(text, color, opts) {
+  opts = opts || {};
+  const totalTwips = 9360;
+  const rPr = '<w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/><w:caps/></w:rPr>';
+  return `<w:tbl>
+    <w:tblPr><w:tblW w:w="${totalTwips}" w:type="dxa"/><w:tblBorders>
+      <w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/>
+      <w:insideH w:val="none"/><w:insideV w:val="none"/>
+    </w:tblBorders></w:tblPr>
+    <w:tblGrid><w:gridCol w:w="${totalTwips}"/></w:tblGrid>
+    <w:tr><w:tc><w:tcPr><w:tcW w:w="${totalTwips}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="${color}"/><w:tcMar><w:top w:w="100" w:type="dxa"/><w:bottom w:w="100" w:type="dxa"/><w:left w:w="150" w:type="dxa"/><w:right w:w="150" w:type="dxa"/></w:tcMar></w:tcPr>
+      <w:p><w:r>${rPr}<w:t xml:space="preserve">${escXml(text) || ' '}</w:t></w:r></w:p>
+    </w:tc></w:tr>
+  </w:tbl>`;
+}
+
+// A small colored "pill" -- inline shaded run, e.g. "Goal 1" in a navy/pink/
+// teal badge -- echoing the PDF's rounded goal-number pills.
+function docxPill(text, color) {
+  return `<w:r><w:rPr><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="18"/><w:shd w:val="clear" w:color="auto" w:fill="${color}"/></w:rPr><w:t xml:space="preserve"> ${escXml(text)} </w:t></w:r><w:r><w:t xml:space="preserve">  </w:t></w:r>`;
+}
+
+// A raw paragraph built from pre-built runs (e.g. a pill run followed by
+// normal text runs) rather than a single plain-text run.
+function docxParagraphRuns(runsXml, opts) {
+  opts = opts || {};
+  const props = [];
+  if (opts.spaceBefore !== undefined) props.push(`<w:spacing w:before="${opts.spaceBefore}"${opts.spaceAfter !== undefined ? ` w:after="${opts.spaceAfter}"` : ''}/>`);
+  const pPr = props.length ? `<w:pPr>${props.join('')}</w:pPr>` : '';
+  return `<w:p>${pPr}${runsXml}</w:p>`;
 }
 
 // Plain multi-line text (e.g. the agenda textarea) -> one paragraph per line.
@@ -1935,16 +1981,25 @@ function docxPageBreak() {
   return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
 }
 
-// Simple table: header row (bold) + data rows. widthsPct sums to ~100.
-function docxTable(headers, rows, widthsPct) {
+// Simple table: header row (shaded, bold white text -- matching the PDF
+// export's navy table headers) + data rows, with subtle zebra striping on
+// alternating rows. widthsPct sums to ~100. headerColor defaults to LCC/
+// Hampton navy; pass a different hex to match a specific section's accent
+// color if ever needed.
+function docxTable(headers, rows, widthsPct, headerColor) {
   const totalTwips = 9360; // usable width at default margins, in twips
+  const HEADER_COLOR = headerColor || '1B4FA8';
+  const STRIPE_COLOR = 'F2F5FA';
   const gridCols = widthsPct.map(pct => `<w:gridCol w:w="${Math.round(totalTwips * pct / 100)}"/>`).join('');
-  const cellXml = (text, bold) => {
-    const rPr = bold ? '<w:rPr><w:b/></w:rPr>' : '';
-    return `<w:tc><w:p><w:r>${rPr}<w:t xml:space="preserve">${escXml(text) || ' '}</w:t></w:r></w:p></w:tc>`;
+  const cellXml = (text, opts) => {
+    opts = opts || {};
+    const rPr = opts.bold ? `<w:rPr><w:b/>${opts.white ? '<w:color w:val="FFFFFF"/>' : ''}</w:rPr>` : '';
+    const shd = opts.fill ? `<w:shd w:val="clear" w:color="auto" w:fill="${opts.fill}"/>` : '';
+    const tcMar = '<w:tcMar><w:top w:w="80" w:type="dxa"/><w:bottom w:w="80" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tcMar>';
+    return `<w:tc><w:tcPr>${shd}${tcMar}</w:tcPr><w:p><w:r>${rPr}<w:t xml:space="preserve">${escXml(text) || ' '}</w:t></w:r></w:p></w:tc>`;
   };
-  const headerRow = `<w:tr>${headers.map(h => cellXml(h, true)).join('')}</w:tr>`;
-  const dataRows = rows.map(r => `<w:tr>${r.map(c => cellXml(c, false)).join('')}</w:tr>`).join('');
+  const headerRow = `<w:tr>${headers.map(h => cellXml(h, { bold: true, white: true, fill: HEADER_COLOR })).join('')}</w:tr>`;
+  const dataRows = rows.map((r, i) => `<w:tr>${r.map(c => cellXml(c, i % 2 === 1 ? { fill: STRIPE_COLOR } : {})).join('')}</w:tr>`).join('');
   return `<w:tbl>
     <w:tblPr><w:tblW w:w="${totalTwips}" w:type="dxa"/><w:tblBorders>
       <w:top w:val="single" w:sz="4" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:color="CCCCCC"/>
@@ -1956,6 +2011,12 @@ function docxTable(headers, rows, widthsPct) {
   </w:tbl>`;
 }
 
+// Same rotation as the PDF export's GOAL_COLORS -- keeps goal color-coding
+// consistent between the Word doc and the PDF.
+const DOCX_GOAL_COLORS = ['1B4FA8', 'E84D98', '19D3C5', '888888', '2C3E50'];
+const DOCX_NAVY = '1B4FA8';
+const DOCX_PINK = 'E84D98';
+
 function buildTeamPlanDocxParagraphs() {
   const teamName = localStorage.getItem('htsd_checkin_team') || 'Design Team';
   const schoolYear = localStorage.getItem('htsd_identity_year') || '2026–27';
@@ -1964,18 +2025,23 @@ function buildTeamPlanDocxParagraphs() {
   const agendaText = textarea ? textarea.value : buildNovAgendaText();
 
   const parts = [];
-  parts.push(docxParagraph(`${teamName} — Team Project Plan`, { bold: true, size: 32 }));
-  parts.push(docxParagraph(`${schoolYear} · Exported ${exportDate}`, { italic: true, size: 20, color: '666666' }));
+  // Title block -- the navy header band with the Hampton logo (added at
+  // the page level via a running header, see exportTeamPlanDocx) already
+  // carries the branding on every page, so this stays a simple, clean
+  // title directly under it rather than repeating a colored band here.
+  parts.push(docxParagraph(`${teamName} — Team Project Plan`, { bold: true, size: 32, color: DOCX_NAVY, spaceAfter: 40 }));
+  parts.push(docxParagraph(`${schoolYear} · Exported ${exportDate}`, { italic: true, size: 20, color: '666666', spaceAfter: 200 }));
 
   // ── Section 1: November Agenda (the editable draft, as-is on export) ──
-  parts.push(docxParagraph('November Check-In Agenda', { heading: 1, spaceBefore: 360 }));
+  parts.push(docxSectionBar('November Check-In Agenda', DOCX_NAVY));
   parts.push(docxTextBlock(agendaText));
 
   // ── Section 2: Per-goal detail ──
-  parts.push(docxParagraph('Goals & Plans', { heading: 1, spaceBefore: 480 }));
+  parts.push(docxParagraph(' ', { spaceBefore: 200 }));
+  parts.push(docxSectionBar('Goals & Plans', DOCX_NAVY));
   const validGoals = goals.filter(g => g.teamGoal || g.specificOutcome || g.selectedGoalNum);
   if (!validGoals.length) {
-    parts.push(docxParagraph('No goals recorded yet.', { italic: true }));
+    parts.push(docxParagraph('No goals recorded yet.', { italic: true, spaceBefore: 160 }));
   }
   validGoals.forEach((g, i) => {
     // Use the FULL goal language in the heading, not the truncated
@@ -1983,50 +2049,63 @@ function buildTeamPlanDocxParagraphs() {
     // goals) -- same fix as the on-screen Cross-Goal Timeline. Only fall
     // back to goalNickname/specificOutcome when there's no teamGoal at all.
     const goalLabel = g.teamGoal || g.goalNickname || g.specificOutcome || `Goal ${i + 1}`;
-    parts.push(docxParagraph(`Goal ${i + 1}: ${goalLabel}`, { heading: 2, spaceBefore: 320 }));
+    const gc = DOCX_GOAL_COLORS[i % DOCX_GOAL_COLORS.length];
+    // Color-coded "Goal N" pill followed by the full goal statement, with a
+    // matching colored left accent bar -- echoing the PDF's goal-number
+    // badges and the vertical accent bar next to each goal's text.
+    parts.push(docxParagraphRuns(
+      docxPill(`GOAL ${i + 1}`, gc) + `<w:r><w:rPr><w:b/><w:sz w:val="24"/></w:rPr><w:t xml:space="preserve"></w:t></w:r>`,
+      { spaceBefore: 320, spaceAfter: 60 }
+    ));
+    parts.push(docxParagraph(goalLabel, { bold: true, size: 22, leftBorder: gc, spaceAfter: 120 }));
 
     const evidenceItems = (g.evidenceItems || []).filter(e => e.text && e.text.trim());
     if (evidenceItems.length) {
-      parts.push(docxParagraph('Evidence', { bold: true, spaceBefore: 200 }));
+      parts.push(docxParagraph('Evidence', { bold: true, color: DOCX_NAVY, spaceBefore: 160, caps: true, size: 18 }));
       parts.push(docxTable(
         ['Evidence', 'Collect by'],
         evidenceItems.map(e => [e.text, e.collectMonth || '—']),
-        [75, 25]
+        [75, 25],
+        gc
       ));
     }
 
     const roles = (g.roles || []).filter(r => r.name || r.responsibility);
     if (roles.length) {
-      parts.push(docxParagraph('Roles & Responsibilities', { bold: true, spaceBefore: 200 }));
+      parts.push(docxParagraph('Roles & Responsibilities', { bold: true, color: DOCX_NAVY, spaceBefore: 200, caps: true, size: 18 }));
       parts.push(docxTable(
         ['What', 'Who', 'By when'],
         roles.map(r => [r.responsibility || '—', r.name || 'Unassigned', r.byWhen || '—']),
-        [55, 25, 20]
+        [55, 25, 20],
+        gc
       ));
     }
   });
 
   // ── Section 3: Cross-Goal Responsibilities ──
   const crossGoalRoles = (pmData?.crossGoalRoles || []).filter(r => r.name || r.responsibility);
-  parts.push(docxParagraph('Cross-Goal Responsibilities', { heading: 1, spaceBefore: 480 }));
+  parts.push(docxParagraph(' ', { spaceBefore: 200 }));
+  parts.push(docxSectionBar('Cross-Goal Responsibilities', DOCX_PINK));
   if (crossGoalRoles.length) {
     parts.push(docxTable(
       ['Who', 'Responsibility', 'Cadence'],
       crossGoalRoles.map(r => [r.name || 'Unassigned', r.responsibility || '—', r.cadence || '—']),
-      [20, 55, 25]
+      [20, 55, 25],
+      DOCX_PINK
     ));
   } else {
-    parts.push(docxParagraph('No cross-goal responsibilities assigned yet.', { italic: true }));
+    parts.push(docxParagraph('No cross-goal responsibilities assigned yet.', { italic: true, spaceBefore: 160 }));
   }
 
   // ── Section 4: Meeting Cadence ──
-  parts.push(docxParagraph('Meeting Cadence', { heading: 1, spaceBefore: 480 }));
+  parts.push(docxParagraph(' ', { spaceBefore: 200 }));
+  parts.push(docxSectionBar('Meeting Cadence', DOCX_NAVY));
   const cadenceRows = PM_CHECKPOINT_MONTHS.map(mo => [
     mo,
     PM_CHECKPOINT_SHORT[mo] || mo,
     PM_CHECKPOINT_TBD[mo] ? PM_TBD_DATE_LABEL : ((pmData?.checkpointDates?.[mo] || '').trim() || 'Not yet set')
   ]);
-  parts.push(docxTable(['Month', 'Focus', 'Date'], cadenceRows, [20, 45, 35]));
+  parts.push(docxTable(['Month', 'Focus', 'Date'], cadenceRows, [20, 45, 35], DOCX_NAVY));
 
   // ── Section 5: Tasks Due Before November ──
   // Uses resolveDueDisplay (same helper as the on-screen close-out list) so
@@ -2034,7 +2113,8 @@ function buildTeamPlanDocxParagraphs() {
   // too, once the team has set their November checkpoint date — the Word
   // doc and the on-screen list never show different due dates for the same
   // task.
-  parts.push(docxParagraph('Tasks Due Before Your November Meeting', { heading: 1, spaceBefore: 480 }));
+  parts.push(docxParagraph(' ', { spaceBefore: 200 }));
+  parts.push(docxSectionBar('Tasks Due Before Your November Meeting', DOCX_PINK));
   const dueFlatTasks = [];
   (pmData?.crossGoalRoles || []).forEach(r => {
     if (!r.responsibility || !isDueByNovember(r.cadence)) return;
@@ -2050,9 +2130,9 @@ function buildTeamPlanDocxParagraphs() {
   });
   dueFlatTasks.sort((a, b) => a.sortKey - b.sortKey);
   if (dueFlatTasks.length) {
-    parts.push(docxTable(['Task', 'Who', 'Due'], dueFlatTasks.map(t => t.row), [55, 25, 20]));
+    parts.push(docxTable(['Task', 'Who', 'Due'], dueFlatTasks.map(t => t.row), [55, 25, 20], DOCX_PINK));
   } else {
-    parts.push(docxParagraph('No tasks marked due before November yet.', { italic: true }));
+    parts.push(docxParagraph('No tasks marked due before November yet.', { italic: true, spaceBefore: 160 }));
   }
 
   // ── Section 6: Per-Person Task Lists ──
@@ -2081,16 +2161,17 @@ function buildTeamPlanDocxParagraphs() {
   const peopleDocx = Object.keys(personMapDocx);
   if (peopleDocx.length) {
     parts.push(docxPageBreak());
-    parts.push(docxParagraph('Per-Person Task Lists', { heading: 1, spaceBefore: 0 }));
-    parts.push(docxParagraph('Print this section and hand each page to the person named at the top.', { italic: true, size: 20, color: '666666' }));
+    parts.push(docxSectionBar('Per-Person Task Lists', DOCX_NAVY));
+    parts.push(docxParagraph('Print this section and hand each page to the person named at the top.', { italic: true, size: 20, color: '666666', spaceBefore: 120 }));
     peopleDocx.forEach((person, pi) => {
       parts.push(docxPageBreak());
-      parts.push(docxParagraph(person, { heading: 1, spaceBefore: 0 }));
+      const pc = DOCX_GOAL_COLORS[pi % DOCX_GOAL_COLORS.length];
+      parts.push(docxParagraph(person, { bold: true, size: 30, leftBorder: pc, spaceAfter: 160 }));
       const rows = [];
       personMapDocx[person].crossGoal.forEach(t => rows.push(['All goals', t.responsibility, t.cadence || '—']));
       personMapDocx[person].goalTasks.forEach(t => rows.push([`Goal ${t.goalIdx + 1}`, t.responsibility, t.byWhen || '—']));
       if (rows.length) {
-        parts.push(docxTable(['Goal', 'Responsibility', 'Due'], rows, [20, 55, 25]));
+        parts.push(docxTable(['Goal', 'Responsibility', 'Due'], rows, [20, 55, 25], pc));
       } else {
         parts.push(docxParagraph('No responsibilities assigned yet.', { italic: true }));
       }
@@ -2102,13 +2183,68 @@ function buildTeamPlanDocxParagraphs() {
 
 async function exportTeamPlanDocx() {
   const teamName = localStorage.getItem('htsd_checkin_team') || 'Team';
+  const schoolYear = localStorage.getItem('htsd_identity_year') || '2026–27';
   const bodyParagraphs = buildTeamPlanDocxParagraphs();
 
+  // The logo data URI is JPEG-encoded (Hampton crest, reused from the PDF
+  // export) even though its data: prefix says image/png -- strip whichever
+  // prefix is present and embed the raw bytes as a JPEG media part.
+  const logoBase64 = (typeof HAMPTON_LOGO_B64 === 'string') ? HAMPTON_LOGO_B64.replace(/^data:image\/\w+;base64,/, '') : '';
+
+  // ── Running header: navy band + Hampton crest + team name, repeats on
+  // every page ── matching the PDF export's page header.
+  const headerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+       xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:tbl>
+    <w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>
+      <w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/>
+      <w:insideH w:val="none"/><w:insideV w:val="none"/>
+    </w:tblBorders></w:tblPr>
+    <w:tblGrid><w:gridCol w:w="1200"/><w:gridCol w:w="8160"/></w:tblGrid>
+    <w:tr>
+      <w:tc><w:tcPr><w:tcW w:w="1200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1B4FA8"/><w:vAlign w:val="center"/><w:tcMar><w:top w:w="100" w:type="dxa"/><w:bottom w:w="100" w:type="dxa"/><w:left w:w="120" w:type="dxa"/><w:right w:w="80" w:type="dxa"/></w:tcMar></w:tcPr>
+        <w:p><w:r>${logoBase64 ? `<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="457200" cy="457200"/><wp:docPr id="1" name="Hampton Logo"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="1" name="Hampton Logo"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdLogo"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="457200" cy="457200"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>` : ''}</w:r></w:p>
+      </w:tc>
+      <w:tc><w:tcPr><w:tcW w:w="8160" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1B4FA8"/><w:vAlign w:val="center"/><w:tcMar><w:top w:w="100" w:type="dxa"/><w:bottom w:w="100" w:type="dxa"/><w:left w:w="160" w:type="dxa"/><w:right w:w="120" w:type="dxa"/></w:tcMar></w:tcPr>
+        <w:p><w:r><w:rPr><w:b/><w:color w:val="FFE80A"/><w:sz w:val="24"/></w:rPr><w:t xml:space="preserve">${escXml(teamName)}</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:color w:val="AACCEE"/><w:sz w:val="16"/></w:rPr><w:t xml:space="preserve">Hampton Township School District · ${escXml(schoolYear)}</w:t></w:r></w:p>
+      </w:tc>
+    </w:tr>
+  </w:tbl>
+  <w:p/>
+</w:hdr>`;
+
+  // ── Running footer: navy bar with the same attribution line as the PDF
+  // export ──
+  const footerXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:tbl>
+    <w:tblPr><w:tblW w:w="9360" w:type="dxa"/><w:tblBorders>
+      <w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/>
+      <w:insideH w:val="none"/><w:insideV w:val="none"/>
+    </w:tblBorders></w:tblPr>
+    <w:tblGrid><w:gridCol w:w="9360"/></w:tblGrid>
+    <w:tr><w:tc><w:tcPr><w:tcW w:w="9360" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="1B4FA8"/><w:tcMar><w:top w:w="60" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/></w:tcMar></w:tcPr>
+      <w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:color w:val="AACCEE"/><w:sz w:val="14"/></w:rPr><w:t xml:space="preserve">© ${new Date().getFullYear()} Learner-Centered Collaborative · Hampton Township School District — A Tradition of Excellence</w:t></w:r></w:p>
+    </w:tc></w:tr>
+  </w:tbl>
+</w:ftr>`;
+
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
   <w:body>
     ${bodyParagraphs}
-    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>
+    <w:sectPr>
+      <w:headerReference w:type="default" r:id="rIdHeader"/>
+      <w:footerReference w:type="default" r:id="rIdFooter"/>
+      <w:pgSz w:w="12240" w:h="15840"/>
+      <w:pgMar w:top="1600" w:right="1440" w:bottom="1200" w:left="1440" w:header="360" w:footer="360"/>
+    </w:sectPr>
   </w:body>
 </w:document>`;
 
@@ -2129,8 +2265,11 @@ async function exportTeamPlanDocx() {
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
+  <Default Extension="jpeg" ContentType="image/jpeg"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
   <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+  <Override PartName="/word/header1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>
+  <Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>
 </Types>`;
 
   const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -2141,6 +2280,13 @@ async function exportTeamPlanDocx() {
   const docRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rIdHeader" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/>
+  <Relationship Id="rIdFooter" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/>
+</Relationships>`;
+
+  const headerRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/hampton-logo.jpeg"/>
 </Relationships>`;
 
   const zip = new JSZip();
@@ -2149,7 +2295,13 @@ async function exportTeamPlanDocx() {
   const wordFolder = zip.folder('word');
   wordFolder.file('document.xml', documentXml);
   wordFolder.file('styles.xml', stylesXml);
+  wordFolder.file('header1.xml', headerXml);
+  wordFolder.file('footer1.xml', footerXml);
   wordFolder.folder('_rels').file('document.xml.rels', docRelsXml);
+  wordFolder.folder('_rels').file('header1.xml.rels', headerRelsXml);
+  if (logoBase64) {
+    wordFolder.folder('media').file('hampton-logo.jpeg', logoBase64, { base64: true });
+  }
 
   const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
   const url = URL.createObjectURL(blob);
