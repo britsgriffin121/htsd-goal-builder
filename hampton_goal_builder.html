@@ -1493,6 +1493,88 @@ function isDueByNovember(due) {
   return NOV_DUE_MONTHS.has(due);
 }
 
+// ── Real due dates for "Ongoing"/"Each checkpoint" responsibilities ──────────
+// "Ongoing" and "Each checkpoint" are honest about frequency but useless as
+// an actual due date on the "Tasks Due Before November" list. Once a team
+// sets their November checkpoint date, offset rules (agreed with Brittany,
+// 2026-09-18) turn those into a real date instead. Matching is by exact
+// responsibility text against the tool's own default wording — a team that
+// retypes a responsibility, or adds a custom one, falls through to the
+// general default rather than going unmatched.
+const DUE_DATE_OFFSET_RULES = [
+  { match: 'Schedule design team meetings', offsetDays: -30 },
+  { match: 'Facilitate design team meetings', offsetDays: 0 },
+  { match: 'Communicate goal progress to district team', offsetDays: 2 },
+  { match: 'Collect and organize evidence across all goals before design team meeting', offsetDays: -3 },
+];
+const DUE_DATE_DEFAULT_OFFSET_DAYS = -7; // any other Ongoing/Each-checkpoint responsibility
+
+function offsetDaysForResponsibility(responsibility) {
+  const rule = DUE_DATE_OFFSET_RULES.find(r => r.match === (responsibility || '').trim());
+  return rule ? rule.offsetDays : DUE_DATE_DEFAULT_OFFSET_DAYS;
+}
+
+// Parses pmData.checkpointDates.Nov (an <input type="date"> value, so
+// YYYY-MM-DD) into a local Date at noon — noon avoids any timezone-related
+// off-by-one when only the date (not time) matters, which is all we use here.
+function parseNovCheckpointDate() {
+  const raw = (pmData?.checkpointDates?.Nov || '').trim();
+  if (!raw) return null;
+  const parts = raw.split('-').map(n => parseInt(n, 10));
+  if (parts.length !== 3 || parts.some(isNaN)) return null;
+  const [y, m, d] = parts;
+  return new Date(y, m - 1, d, 12);
+}
+
+function formatDueDateShort(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Due dates never land on a weekend (Brittany, 2026-09-18). Rolls BACKWARD
+// to the preceding Friday, not forward to Monday — these are all deadlines
+// counting down to a fixed November meeting date, so pulling a due date
+// earlier keeps its lead time intact; pushing it later would eat into the
+// buffer the offset was meant to provide (e.g. "3 days before" landing on a
+// Saturday should still be done with a few days to spare, not slide to the
+// following Monday, which could be AFTER the meeting for a small offset).
+function rollBackIfWeekend(date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0 = Sunday, 6 = Saturday
+  if (day === 0) d.setDate(d.getDate() - 2); // Sunday -> Friday
+  if (day === 6) d.setDate(d.getDate() - 1); // Saturday -> Friday
+  return d;
+}
+
+// Returns { label, sortKey } for a cross-goal or per-goal responsibility's
+// due column. label is a real "Oct 15" date once the Nov checkpoint date is
+// set and the cadence is Ongoing/Each checkpoint; otherwise it falls back to
+// the raw cadence text (e.g. "Ongoing") exactly as today, so nothing breaks
+// or looks empty before a team fills in their November date. sortKey is a
+// comparable number (days-from-epoch for real dates, or the existing
+// DUE_SORT-style bucket for text fallbacks) so callers can order the list
+// chronologically once real dates are available.
+function resolveDueDisplay(responsibility, cadenceOrByWhen) {
+  const isFlexible = cadenceOrByWhen === 'Ongoing' || cadenceOrByWhen === 'Each checkpoint';
+  if (!isFlexible) {
+    const MONTH_SORT = { Sep: 1, Oct: 2, Nov: 3 };
+    return { label: cadenceOrByWhen, sortKey: 1000 + (MONTH_SORT[cadenceOrByWhen] || 9) };
+  }
+  const novDate = parseNovCheckpointDate();
+  if (!novDate) {
+    // No Nov date set yet — fall back to the cadence label, same as before.
+    return { label: cadenceOrByWhen, sortKey: 0 };
+  }
+  const offsetDays = offsetDaysForResponsibility(responsibility);
+  let dueDate = new Date(novDate);
+  dueDate.setDate(dueDate.getDate() + offsetDays);
+  // Skip the weekend roll for a same-day (0-offset) due date — that IS the
+  // November meeting date the team picked themselves, not a derived
+  // deadline, so this tool shouldn't second-guess it even if it falls on a
+  // weekend (the team's own choice, out of scope to "fix").
+  if (offsetDays !== 0) dueDate = rollBackIfWeekend(dueDate);
+  return { label: formatDueDateShort(dueDate), sortKey: dueDate.getTime() };
+}
+
 function renderCheckinNovDueTasks() {
   const container = document.getElementById('checkinNovDueTasks');
   if (!container) return;
@@ -1502,17 +1584,21 @@ function renderCheckinNovDueTasks() {
 
   (pmData?.crossGoalRoles || []).forEach(r => {
     if (!r.responsibility || !isDueByNovember(r.cadence)) return;
+    const dueDisplay = resolveDueDisplay(r.responsibility, r.cadence);
     flatTasks.push({
       badgeLabel: 'ALL', badgeColor: '#333333',
-      responsibility: r.responsibility, who: r.name || 'Unassigned', due: r.cadence,
+      responsibility: r.responsibility, who: r.name || 'Unassigned',
+      due: dueDisplay.label, sortKey: dueDisplay.sortKey,
     });
   });
   goals.forEach((g, gi) => {
     (g.roles || []).forEach(r => {
       if (!r.responsibility || !isDueByNovember(r.byWhen)) return;
+      const dueDisplay = resolveDueDisplay(r.responsibility, r.byWhen);
       flatTasks.push({
         badgeLabel: 'G' + (gi + 1), badgeColor: GOAL_COLORS[gi % GOAL_COLORS.length],
-        responsibility: r.responsibility, who: r.name || 'Unassigned', due: r.byWhen,
+        responsibility: r.responsibility, who: r.name || 'Unassigned',
+        due: dueDisplay.label, sortKey: dueDisplay.sortKey,
       });
     });
   });
@@ -1522,8 +1608,7 @@ function renderCheckinNovDueTasks() {
     return;
   }
 
-  const DUE_SORT = { Ongoing: 0, 'Each checkpoint': 0, Sep: 1, Oct: 2, Nov: 3 };
-  flatTasks.sort((a, b) => (DUE_SORT[a.due] ?? 9) - (DUE_SORT[b.due] ?? 9));
+  flatTasks.sort((a, b) => a.sortKey - b.sortKey);
 
   const rows = flatTasks.map(t => `
     <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);">
@@ -1907,20 +1992,28 @@ function buildTeamPlanDocxParagraphs() {
   parts.push(docxTable(['Month', 'Focus', 'Date'], cadenceRows, [20, 45, 35]));
 
   // ── Section 5: Tasks Due Before November ──
+  // Uses resolveDueDisplay (same helper as the on-screen close-out list) so
+  // "Ongoing"/"Each checkpoint" responsibilities show a real due date here
+  // too, once the team has set their November checkpoint date — the Word
+  // doc and the on-screen list never show different due dates for the same
+  // task.
   parts.push(docxParagraph('Tasks Due Before Your November Meeting', { heading: 1, spaceBefore: 480 }));
-  const flatTasks = [];
+  const dueFlatTasks = [];
   (pmData?.crossGoalRoles || []).forEach(r => {
     if (!r.responsibility || !isDueByNovember(r.cadence)) return;
-    flatTasks.push([r.responsibility, r.name || 'Unassigned', r.cadence]);
+    const dueDisplay = resolveDueDisplay(r.responsibility, r.cadence);
+    dueFlatTasks.push({ row: [r.responsibility, r.name || 'Unassigned', dueDisplay.label], sortKey: dueDisplay.sortKey });
   });
   validGoals.forEach((g, gi) => {
     (g.roles || []).forEach(r => {
       if (!r.responsibility || !isDueByNovember(r.byWhen)) return;
-      flatTasks.push([`${r.responsibility} (Goal ${gi + 1})`, r.name || 'Unassigned', r.byWhen]);
+      const dueDisplay = resolveDueDisplay(r.responsibility, r.byWhen);
+      dueFlatTasks.push({ row: [`${r.responsibility} (Goal ${gi + 1})`, r.name || 'Unassigned', dueDisplay.label], sortKey: dueDisplay.sortKey });
     });
   });
-  if (flatTasks.length) {
-    parts.push(docxTable(['Task', 'Who', 'Due'], flatTasks, [55, 25, 20]));
+  dueFlatTasks.sort((a, b) => a.sortKey - b.sortKey);
+  if (dueFlatTasks.length) {
+    parts.push(docxTable(['Task', 'Who', 'Due'], dueFlatTasks.map(t => t.row), [55, 25, 20]));
   } else {
     parts.push(docxParagraph('No tasks marked due before November yet.', { italic: true }));
   }
