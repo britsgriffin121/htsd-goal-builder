@@ -413,7 +413,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
     </div>
     <div class="phase-stepper" id="phaseStepper">
       <div class="phase-step">
-        <button class="phase-node active" id="phaseBtn-launch" onclick="switchPhase('launch')" title="Launch">
+        <button class="phase-node active" id="phaseBtn-launch" onclick="clickLaunchStep()" title="Launch">
           <span class="pn">1</span><span class="phase-label">Launch</span>
         </button>
       </div>
@@ -3010,6 +3010,24 @@ function jumpToGoalEvidenceFromPlan(idx) {
   startCheckinGoalWizard(idx);
 }
 
+// The stepper's "1 Launch" pill: in check-in mode there is no standalone
+// Launch phase to show -- phaseView-launch's own content (mode gate / team
+// picker) gets hidden for good once a team is picked (see the page-load
+// restore branch below), so calling switchPhase('launch') directly leaves
+// phaseView-launch visible but everything inside it hidden -- a blank page.
+// The real "orientation" step for check-in mode is the Kickoff/Norms view,
+// so route there instead, remembering the phase we came from so Continue
+// can send the team back to where they were instead of always to the goal
+// summary.
+function clickLaunchStep() {
+  if (document.body.classList.contains('checkin-mode')) {
+    const teamName = localStorage.getItem('htsd_checkin_team') || '';
+    showCheckinKickoff(teamName, currentPhase);
+  } else {
+    switchPhase('launch');
+  }
+}
+
 function showCheckinKickoff(teamName, returnTo) {
   checkinKickoffReturnTo = returnTo || null;
   // checkinKickoffView physically lives inside phaseView-goals — if we're
@@ -3051,8 +3069,11 @@ function renderCheckinKickoffFraming(teamName) {
 function proceedFromCheckinKickoff() {
   const returnTo = checkinKickoffReturnTo;
   checkinKickoffReturnTo = null;
-  if (returnTo === 'portfolio') {
-    switchPhase('portfolio');
+  // 'goals' means "go to the goal summary", same as no returnTo at all --
+  // Kickoff already lives inside phaseView-goals, so there's no separate
+  // phase to switch to for that case.
+  if (returnTo && returnTo !== 'launch' && returnTo !== 'goals') {
+    switchPhase(returnTo);
   } else {
     showCheckinSummary();
   }
