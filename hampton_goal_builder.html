@@ -2565,6 +2565,10 @@ const ALIGN_ONGOING_LABEL = 'Align · ongoing since 2022–23';
 const ALIGN_ONGOING_FOCUS = 'Hampton\'s foundational discovery work — deeply understanding learners, educators, and the system, elevating bright spots and lived experience — has been ongoing since the 2022-23 school year. It\'s the continuous groundwork underneath everything else on this timeline, not a single event.';
 const SUMMER_CODESIGN_LABEL = 'Co-Design · Imagine & Build';
 const SUMMER_CODESIGN_FOCUS = 'Happened this past summer, before your fall check-in: co-creating goals and Big Moves with your team, informed by what you learned in Align. This work is already done by the time you\'re using this check-in — shown here for context on where this year\'s cycle began.';
+// Fixed date, same for every team (not editable -- this happened once,
+// for everyone, unlike Sep/Nov/Jan/Mar/May which are each team's own
+// chosen date). Confirmed with Brittany, 2026-09-18.
+const SUMMER_CODESIGN_DATE = '2026-06-11';
 
 function renderPmCadence() {
   if (!pmData) return;
@@ -2577,7 +2581,14 @@ function renderPmCadence() {
   // shape (checkmark circle, muted styling, LCC-facilitated badge, "Already
   // done"), just different label/tooltip text, so they render identically
   // to each other and only real difference is content.
-  function leadInNodeHtml(label, focusText, tooltipAlignClass) {
+  function leadInNodeHtml(label, focusText, tooltipAlignClass, dateStr) {
+    // dateStr (YYYY-MM-DD), when given, is a fixed date that already
+    // happened and is the same for every team -- shown as plain formatted
+    // text, not an editable input like the real Sep/Nov/Jan/Mar/May dates,
+    // since there's nothing for a team to choose here.
+    const dateDisplay = dateStr
+      ? new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : '';
     return `
       <div style="flex:1;min-width:120px;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;opacity:0.72;">
         <div style="position:absolute;top:15px;left:50%;width:100%;height:3px;background:var(--border-strong);z-index:0;"></div>
@@ -2587,13 +2598,13 @@ function renderPmCadence() {
           <span class="cadence-node-tooltip ${tooltipAlignClass}">${esc(focusText)}</span>
         </div>
         <div class="cadence-host-badge cadence-host-badge-lcc" style="margin-top:6px;">${esc(HOST_BADGE_LABEL.lcc)}</div>
-        <div style="margin-top:4px;font-size:12.5px;color:var(--text-muted);font-style:italic;">Already done</div>
+        <div style="margin-top:4px;font-size:12.5px;color:var(--text-muted);font-style:italic;">Already done${dateDisplay ? ' · ' + esc(dateDisplay) : ''}</div>
       </div>`;
   }
 
   const leadInNodesHtml = isCheckin
     ? leadInNodeHtml(ALIGN_ONGOING_LABEL, ALIGN_ONGOING_FOCUS, 'cadence-node-tooltip-left')
-      + leadInNodeHtml(SUMMER_CODESIGN_LABEL, SUMMER_CODESIGN_FOCUS, '')
+      + leadInNodeHtml(SUMMER_CODESIGN_LABEL, SUMMER_CODESIGN_FOCUS, '', SUMMER_CODESIGN_DATE)
     : '';
 
   const nodesHtml = PM_CHECKPOINT_MONTHS.map((mo, i) => {
