@@ -202,6 +202,10 @@ body.checkin-mode .reflection-nudge{display:block}
 .cadence-node-tooltip-right{left:auto;right:0;transform:none}
 .cadence-node-tooltip-right::after{left:auto;right:16px;transform:none}
 .cadence-node-label:hover .cadence-node-tooltip{visibility:visible;opacity:1}
+.cadence-host-badge{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;padding:2px 8px;border-radius:20px;line-height:1.5}
+.cadence-host-badge-lcc{background:rgba(27,109,196,0.12);color:var(--hampton-blue)}
+.cadence-host-badge-team{background:rgba(46,125,50,0.12);color:#2E7D32}
+
 .pm-divider{border:none;border-top:1px solid var(--border);margin:24px 0}
 @media (max-width:760px){.goal-nav{padding:10px 16px;align-items:flex-start;flex-direction:column}.goal-nav-tabs{width:100%}}
 .layout{display:grid;grid-template-columns:1fr min(270px,22vw);gap:0}
@@ -2363,13 +2367,41 @@ const PM_CHECKPOINT_FOCUS = {
 // PM_CHECKPOINT_FOCUS text above is still shown as detail (title/tooltip
 // and the "Focus" column in the table-based renders), this is just what
 // fits directly on the visual.
+// Labels align each checkpoint to LCC's Innovation Design Cycle (Align,
+// Co-Design, Launch, Advance — from the district-embedded R&D framework
+// doc). Clarified with Brittany, 2026-09-18: Align at Hampton isn't a fall
+// check-in event — it's been ongoing multi-year discovery work since the
+// 2022-23 school year, shown as its own display-only lead-in node (see
+// ALIGN_ONGOING_LABEL below), same treatment as the Summer/Co-Design node.
+// Co-Design happened THIS summer (goals/Big Moves were shaped and
+// prototyped then) — also a display-only lead-in node, since that work is
+// done before check-in mode opens and isn't one of the 5 date-bearing
+// checkpoints. Sep kicks off Launch (confirming focus/norms to start the
+// test-and-learn cycle), and Nov/Jan/Mar continue it — all four share the
+// "Launch" tag with their own differentiator after it, so they still read
+// distinctly at a glance rather than repeating identically.
 const PM_CHECKPOINT_SHORT = {
-  Sep: 'Design Team Fall Workshop',
-  Nov: 'Monitor & adjust',
-  Jan: 'Mid-year review',
-  Mar: 'Expand & refine',
-  May: 'Measure & celebrate',
+  Sep: 'Design Team Fall Workshop · Launch: Align & Focus',
+  Nov: 'Launch · Monitor & Adjust',
+  Jan: 'Launch · Mid-Year Review',
+  Mar: 'Launch · Expand & Refine',
+  May: 'Advance · Reflect & Grow',
 };
+
+// Who actually runs each checkpoint (Brittany, 2026-09-18): Summer, Sep,
+// and Mar are in-person workshops LCC facilitates; Nov, Jan, and May are
+// meetings the team schedules and runs themselves. Shown as a badge under
+// each node's label on the cadence timeline so it's clear at a glance which
+// dates the team needs to coordinate on their own vs. which are already
+// being run for them.
+const PM_CHECKPOINT_HOST = {
+  Sep: 'lcc',
+  Nov: 'team',
+  Jan: 'team',
+  Mar: 'lcc',
+  May: 'team',
+};
+const HOST_BADGE_LABEL = { lcc: 'LCC-facilitated', team: 'Your team hosts' };
 
 let pmData = null;
 
@@ -2512,20 +2544,67 @@ function renderPmRoles() {
 // each with its month, a short focus label, and a date field — replacing
 // the old vertical table so the "shape of the year" reads as one picture
 // instead of five similar-looking rows to scan top to bottom.
+// Display-only lead-in node representing LCC's Co-Design phase, which
+// happens in spring/summer BEFORE check-in mode opens — not a real
+// checkpointDates entry (no date picker, doesn't count toward the "all 5
+// dates set" export completeness gate), just visual context so the full
+// 4-phase Innovation Design Cycle (Align/Co-Design/Launch/Advance) reads as
+// one continuous story on the timeline even though only Align/Launch/
+// Advance have actual fall check-in dates. Brittany, 2026-09-18.
+// Two display-only lead-in nodes, check-in mode only — neither is a real
+// checkpointDates entry (no date picker, no export completeness impact),
+// just visual context so the full 4-phase Innovation Design Cycle reads as
+// one continuous story:
+//   1. Align — NOT a fall event. Ongoing multi-year discovery work at
+//      Hampton since the 2022-23 school year. Shown as a single lead-in
+//      node representing that whole span, not a point in time.
+//   2. Co-Design — happened THIS past summer: goals/Big Moves were shaped
+//      and prototyped with the team, informed by Align.
+// Clarified with Brittany, 2026-09-18.
+const ALIGN_ONGOING_LABEL = 'Align · ongoing since 2022–23';
+const ALIGN_ONGOING_FOCUS = 'Hampton\'s foundational discovery work — deeply understanding learners, educators, and the system, elevating bright spots and lived experience — has been ongoing since the 2022-23 school year. It\'s the continuous groundwork underneath everything else on this timeline, not a single event.';
+const SUMMER_CODESIGN_LABEL = 'Co-Design · Imagine & Build';
+const SUMMER_CODESIGN_FOCUS = 'Happened this past summer, before your fall check-in: co-creating goals and Big Moves with your team, informed by what you learned in Align. This work is already done by the time you\'re using this check-in — shown here for context on where this year\'s cycle began.';
+
 function renderPmCadence() {
   if (!pmData) return;
   const containers = PM_CADENCE_TBODY_IDS.map(id => document.getElementById(id)).filter(Boolean);
   if (!containers.length) return;
 
-  const nodeCount = PM_CHECKPOINT_MONTHS.length;
+  const isCheckin = document.body.classList.contains('checkin-mode');
+
+  // Small shared builder for the two display-only lead-in nodes — same
+  // shape (checkmark circle, muted styling, LCC-facilitated badge, "Already
+  // done"), just different label/tooltip text, so they render identically
+  // to each other and only real difference is content.
+  function leadInNodeHtml(label, focusText, tooltipAlignClass) {
+    return `
+      <div style="flex:1;min-width:120px;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;opacity:0.72;">
+        <div style="position:absolute;top:15px;left:50%;width:100%;height:3px;background:var(--border-strong);z-index:0;"></div>
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--text-muted);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;z-index:1;position:relative;">✓</div>
+        <div class="cadence-node-label" style="font-size:12.5px;font-weight:600;color:var(--text);margin-top:8px;line-height:1.3;">
+          <span>${esc(label)}</span><span class="cadence-info-dot">i</span>
+          <span class="cadence-node-tooltip ${tooltipAlignClass}">${esc(focusText)}</span>
+        </div>
+        <div class="cadence-host-badge cadence-host-badge-lcc" style="margin-top:6px;">${esc(HOST_BADGE_LABEL.lcc)}</div>
+        <div style="margin-top:4px;font-size:11px;color:var(--text-muted);font-style:italic;">Already done</div>
+      </div>`;
+  }
+
+  const leadInNodesHtml = isCheckin
+    ? leadInNodeHtml(ALIGN_ONGOING_LABEL, ALIGN_ONGOING_FOCUS, 'cadence-node-tooltip-left')
+      + leadInNodeHtml(SUMMER_CODESIGN_LABEL, SUMMER_CODESIGN_FOCUS, '')
+    : '';
+
   const nodesHtml = PM_CHECKPOINT_MONTHS.map((mo, i) => {
-    const isLast = i === nodeCount - 1;
+    const isLast = i === PM_CHECKPOINT_MONTHS.length - 1;
+    const isFirstOverall = !isCheckin && i === 0; // the two lead-in nodes take the "first" slot in check-in mode
     const dateVal = pmData.checkpointDates[mo] || '';
     // Edge nodes' tooltips get cut off by the row's own bounds if centered
     // under the node (left:50% + translateX(-50%)) — align the first node's
     // tooltip to its left edge and the last node's to its right edge so the
     // full card stays on-screen instead of spilling past the row.
-    const tipAlignClass = i === 0 ? 'cadence-node-tooltip-left' : (isLast ? 'cadence-node-tooltip-right' : '');
+    const tipAlignClass = isFirstOverall ? 'cadence-node-tooltip-left' : (isLast ? 'cadence-node-tooltip-right' : '');
     return `
       <div style="flex:1;min-width:120px;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;">
         ${!isLast ? `<div style="position:absolute;top:15px;left:50%;width:100%;height:3px;background:var(--border-strong);z-index:0;"></div>` : ''}
@@ -2534,6 +2613,7 @@ function renderPmCadence() {
           <span>${esc(PM_CHECKPOINT_SHORT[mo] || mo)}</span><span class="cadence-info-dot">i</span>
           <span class="cadence-node-tooltip ${tipAlignClass}">${esc(PM_CHECKPOINT_FOCUS[mo])}</span>
         </div>
+        <div class="cadence-host-badge cadence-host-badge-${PM_CHECKPOINT_HOST[mo]}" style="margin-top:6px;">${esc(HOST_BADGE_LABEL[PM_CHECKPOINT_HOST[mo]])}</div>
         <input type="date" class="cadence-date-input" value="${esc(dateVal)}" oninput="pmUpdateCheckpoint('${mo}',this.value)" style="margin-top:8px;width:100%;max-width:140px;font-size:12.5px;" />
       </div>`;
   }).join('');
@@ -2541,7 +2621,7 @@ function renderPmCadence() {
   // Give the row real top padding (not just visual spacing) so the tooltip,
   // which pops up ABOVE the node, has room to render without being clipped
   // by the row's own top edge or an ancestor's overflow box.
-  const html = `<div style="display:flex;align-items:flex-start;gap:4px;padding:56px 4px 2px;margin-top:-50px;overflow:visible;">${nodesHtml}</div>`;
+  const html = `<div style="display:flex;align-items:flex-start;gap:4px;padding:56px 4px 2px;margin-top:-50px;overflow:visible;">${leadInNodesHtml}${nodesHtml}</div>`;
   containers.forEach(container => { container.innerHTML = html; container.style.overflow = 'visible'; });
 }
 
