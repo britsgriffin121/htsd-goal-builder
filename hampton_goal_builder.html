@@ -437,7 +437,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
       </div>
       <div class="phase-conn" id="phaseConn-4"></div>
       <div class="phase-step">
-        <button class="phase-node export-phase future" id="phaseBtn-export" onclick="switchPhase('export')" title="Export">
+        <button class="phase-node export-phase future" id="phaseBtn-export" onclick="clickExportStep()" title="Export">
           <span class="pn">5</span><span class="phase-label" style="display:none">Export</span>
         </button>
       </div>
@@ -1175,7 +1175,6 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 
     <div class="portfolio-actions">
       <button class="btn-secondary" onclick="switchPhase('goals')">← Back to Goals</button>
-      <button class="btn-primary" onclick="switchPhase('export')">Continue to Export →</button>
     </div>
   </div>
 
@@ -3082,6 +3081,25 @@ function jumpToGoalEvidenceFromPlan(idx) {
 // so route there instead, remembering the phase we came from so Continue
 // can send the team back to where they were instead of always to the goal
 // summary.
+// The stepper's "5 Export" pill: check-in mode's real export experience
+// (the "Download Team Project Plan (Word)" button, plus the checklist
+// around it) lives inside the Team Project Plan close-out
+// (checkinCloseoutShell, phase 'portfolio') -- phaseView-export is the
+// OLD, Summer-mode-only, PDF-only export page from before that Word
+// export existed. Brittany hit this directly: clicking "5" (likely via
+// this same stepper pill, since the button that used to point here inside
+// the close-out was removed in the same pass) landed her on a page
+// talking about a PDF and a hardcoded Drive link with no mention of the
+// Word doc she'd already downloaded. Route check-in mode back to the
+// close-out instead; Summer mode is unaffected.
+function clickExportStep() {
+  if (document.body.classList.contains('checkin-mode')) {
+    switchPhase('portfolio');
+  } else {
+    switchPhase('export');
+  }
+}
+
 function clickLaunchStep() {
   if (document.body.classList.contains('checkin-mode')) {
     const teamName = localStorage.getItem('htsd_checkin_team') || '';
