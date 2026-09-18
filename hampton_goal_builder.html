@@ -1654,11 +1654,17 @@ function renderCheckinCrossGoalTimeline() {
     return;
   }
 
-  const hasAnyDates = rows.some(r => r.startIdx !== null);
-  if (!hasAnyDates) {
-    container.innerHTML = '<p style="font-size:15px;color:var(--text-muted);font-style:italic;">Set evidence collection months on your goals to see them mapped here.</p>';
-    return;
-  }
+  // Used to bail out here with a static "set evidence months to see them
+  // mapped" message whenever NO goal (across the whole team) had a
+  // collectMonth set yet -- which meant the per-row "+ Add your evidence
+  // plan" link below never rendered at all for a team whose only goal(s)
+  // still needed dates. That's not an edge case: every goal carried over
+  // from spring (SPRING_GOALS) arrives with evidenceItems that have text
+  // but no collectMonth, so a team with just one goal would ALWAYS hit
+  // this and see a dead end with nothing to click. Brittany hit exactly
+  // this on Hampton High School, 2026-09-18. Now falls through to the
+  // normal per-row rendering instead, which still gives each goal its own
+  // empty track plus a working link into that goal's Evidence step.
 
   const labelColW = 190;
   const monthColW = 44;
@@ -3103,6 +3109,19 @@ function showCheckinSummary() {
   renderCheckinSummary();
 }
 
+// A goal's evidence plan isn't "done" just because it has evidence TEXT --
+// every goal carried over from spring (SPRING_GOALS) already has text but
+// no collectMonth, since spring never asked for one. Require a real
+// collection month too, so the check-in wizard doesn't skip a goal (and
+// the Project Plan's "+ Add your evidence plan" prompt doesn't stay
+// silent) just because last spring's wording is still sitting there.
+// Brittany hit this on Hampton High School, 2026-09-18: the wizard's
+// evidence step never showed because her one goal's spring evidence text
+// alone looked "complete".
+function goalHasEvidencePlan(g) {
+  return (g.evidenceItems || []).some(e => e.text && e.text.trim() && e.collectMonth);
+}
+
 function renderCheckinSummary() {
   const list = document.getElementById('checkinGoalList');
   if (!list) return;
@@ -3110,7 +3129,14 @@ function renderCheckinSummary() {
   if (skipBtn) skipBtn.style.display = goals.length ? '' : 'none';
   list.innerHTML = goals.map((g, i) => {
     const text = g.teamGoal || g.specificOutcome || `Goal ${i + 1} (not yet named)`;
-    const hasAnyEvidence = (g.evidenceItems || []).some(e => e.text && e.text.trim());
+    const hasAnyText = (g.evidenceItems || []).some(e => e.text && e.text.trim());
+    const hasPlan = goalHasEvidencePlan(g);
+    // Distinguish "nothing entered yet" from "evidence is listed but no
+    // collection date is set" (the common case for spring carry-over
+    // goals) so the flag actually points at what's missing.
+    const statusFlag = hasPlan ? '' : (hasAnyText
+      ? `<span style="font-size:14px;color:var(--text-light);font-style:italic;">No collection dates set yet</span>`
+      : `<span style="font-size:14px;color:var(--text-light);font-style:italic;">No evidence yet</span>`);
     return `<div class="checkin-goal-row" style="display:block;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px;">
         <span class="checkin-goal-row-text" style="flex:1;cursor:pointer;" title="Click to edit this goal's evidence & owners" onclick="startCheckinGoalWizard(${i})">${esc(text)}</span>
@@ -3118,7 +3144,7 @@ function renderCheckinSummary() {
       </div>
       <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
         <button class="btn-secondary" style="padding:5px 10px;font-size:14.5px;" onclick="startEditCheckinGoalText(${i})">Edit wording</button>
-        ${!hasAnyEvidence ? `<span style="font-size:14px;color:var(--text-light);font-style:italic;">No evidence yet</span>` : ''}
+        ${statusFlag}
       </div>
     </div>`;
   }).join('');
@@ -3129,12 +3155,12 @@ function proceedFromCheckinReview() {
   // If every goal already has evidence, there's nothing left to walk through
   // in the wizard — go straight to the Project Plan step instead of looping
   // back into goal 1's wizard, which had no way back out to Project Plan.
-  const allDone = goals.every(g => (g.evidenceItems || []).some(e => e.text && e.text.trim()));
+  const allDone = goals.every(goalHasEvidencePlan);
   if (allDone) {
     tryAdvanceToProjectPlan();
     return;
   }
-  const firstUnfinished = goals.findIndex(g => !(g.evidenceItems || []).some(e => e.text && e.text.trim()));
+  const firstUnfinished = goals.findIndex(g => !goalHasEvidencePlan(g));
   startCheckinGoalWizard(firstUnfinished === -1 ? 0 : firstUnfinished);
 }
 
@@ -3154,12 +3180,12 @@ function tryAdvanceToProjectPlan() {
   // the goal wizard. Check-in mode goes straight to the close-out
   // (phaseView-portfolio) instead; Summer mode still uses the PM phase.
   const destPhase = document.body.classList.contains('checkin-mode') ? 'portfolio' : 'pm';
-  const emptyCount = goals.filter(g => !(g.evidenceItems || []).some(e => e.text && e.text.trim())).length;
+  const emptyCount = goals.filter(g => !goalHasEvidencePlan(g)).length;
   if (emptyCount > 0) {
     const goalWord = emptyCount === 1 ? 'goal doesn\'t' : 'goals don\'t';
     showConfirmModal(
-      'Continue without evidence?',
-      `${emptyCount} of ${goals.length} ${goalWord} have evidence defined yet. The Project Plan works best once each goal has evidence in place. Continue anyway?`,
+      'Continue without evidence collection dates?',
+      `${emptyCount} of ${goals.length} ${goalWord} have evidence collection dates set yet. The Project Plan works best once each goal has a plan for when evidence will be collected. Continue anyway?`,
       'Continue anyway',
       () => {
         document.getElementById('confirmClearModal')?.classList.remove('open');
