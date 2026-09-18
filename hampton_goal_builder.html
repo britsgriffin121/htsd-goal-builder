@@ -1162,10 +1162,11 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
         </div>
       </div>
       <textarea id="checkinNovAgendaText" style="width:100%;min-height:260px;font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.6;padding:14px;border-radius:var(--radius-sm);border:1.5px solid var(--border-strong);" oninput="persistNovAgendaEdits()"></textarea>
-      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+      <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center;">
         <button class="btn-secondary" onclick="regenerateNovAgenda()">↻ Regenerate from current data</button>
-        <button class="btn-secondary" onclick="exportNovAgendaDocx()">⬇ Download as Word doc</button>
+        <button class="btn-primary" onclick="exportTeamPlanDocx()">⬇ Download Team Project Plan (Word)</button>
       </div>
+      <p style="font-size:12.5px;color:var(--text-muted);margin-top:8px;">Downloads one editable Word document with this agenda plus your goals, evidence, roles, and meeting dates — everything above, all in one file you can keep updating.</p>
     </div>
 
     <div class="portfolio-actions">
@@ -1773,38 +1774,191 @@ function buildNovAgendaText() {
   return lines.join('\n');
 }
 
-// Builds a minimal, valid .docx (Word Open XML) using JSZip — no external
+// Builds a real, structured .docx (Word Open XML) using JSZip — no external
 // docx-generation library is available on our CDN allowlist, so this hand-
-// builds the handful of required XML parts. Each line of the agenda text
-// becomes its own paragraph; the title line is bolded.
-async function exportNovAgendaDocx() {
+// builds the handful of required XML parts. Unlike a plain text dump, this
+// uses real Word headings and tables so the file reads like an actual
+// document, not a paragraph-per-line export.
+//
+// Combined "Team Project Plan" doc: the editable November agenda text,
+// followed by every goal's evidence/roles, the team's Cross-Goal
+// Responsibilities, the Meeting Cadence dates, and the "Tasks Due Before
+// November" list — everything a team worked on today, in one editable
+// Word file they can keep updating as dates or plans change. Replaces the
+// earlier agenda-only export (per Brittany, 2026-09-18: the team should
+// leave with ONE editable doc containing the agenda AND their notes, not
+// an agenda-only Word doc plus a separate non-editable PDF). No
+// completeness gate — exportable at any point in the day, same as the
+// agenda export it replaces.
+function escXml(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function docxParagraph(text, opts) {
+  opts = opts || {};
+  const props = [];
+  if (opts.heading === 1) props.push('<w:pStyle w:val="Heading1"/>');
+  if (opts.heading === 2) props.push('<w:pStyle w:val="Heading2"/>');
+  if (opts.spaceBefore) props.push(`<w:spacing w:before="${opts.spaceBefore}"/>`);
+  const pPr = props.length ? `<w:pPr>${props.join('')}</w:pPr>` : '';
+  const runProps = [];
+  if (opts.bold) runProps.push('<w:b/>');
+  if (opts.italic) runProps.push('<w:i/>');
+  if (opts.size) runProps.push(`<w:sz w:val="${opts.size}"/>`);
+  if (opts.color) runProps.push(`<w:color w:val="${opts.color}"/>`);
+  const rPr = runProps.length ? `<w:rPr>${runProps.join('')}</w:rPr>` : '';
+  const safeText = escXml(text) || ' ';
+  return `<w:p>${pPr}<w:r>${rPr}<w:t xml:space="preserve">${safeText}</w:t></w:r></w:p>`;
+}
+
+// Plain multi-line text (e.g. the agenda textarea) -> one paragraph per line.
+function docxTextBlock(text) {
+  return (text || '').split('\n').map(line => docxParagraph(line)).join('');
+}
+
+// Simple table: header row (bold) + data rows. widthsPct sums to ~100.
+function docxTable(headers, rows, widthsPct) {
+  const totalTwips = 9360; // usable width at default margins, in twips
+  const gridCols = widthsPct.map(pct => `<w:gridCol w:w="${Math.round(totalTwips * pct / 100)}"/>`).join('');
+  const cellXml = (text, bold) => {
+    const rPr = bold ? '<w:rPr><w:b/></w:rPr>' : '';
+    return `<w:tc><w:p><w:r>${rPr}<w:t xml:space="preserve">${escXml(text) || ' '}</w:t></w:r></w:p></w:tc>`;
+  };
+  const headerRow = `<w:tr>${headers.map(h => cellXml(h, true)).join('')}</w:tr>`;
+  const dataRows = rows.map(r => `<w:tr>${r.map(c => cellXml(c, false)).join('')}</w:tr>`).join('');
+  return `<w:tbl>
+    <w:tblPr><w:tblW w:w="${totalTwips}" w:type="dxa"/><w:tblBorders>
+      <w:top w:val="single" w:sz="4" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:color="CCCCCC"/>
+      <w:bottom w:val="single" w:sz="4" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:color="CCCCCC"/>
+      <w:insideH w:val="single" w:sz="4" w:color="CCCCCC"/><w:insideV w:val="single" w:sz="4" w:color="CCCCCC"/>
+    </w:tblBorders></w:tblPr>
+    <w:tblGrid>${gridCols}</w:tblGrid>
+    ${headerRow}${dataRows}
+  </w:tbl>`;
+}
+
+function buildTeamPlanDocxParagraphs() {
+  const teamName = localStorage.getItem('htsd_checkin_team') || 'Design Team';
+  const schoolYear = localStorage.getItem('htsd_identity_year') || '2026–27';
+  const exportDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const textarea = document.getElementById('checkinNovAgendaText');
-  const text = textarea ? textarea.value : '';
+  const agendaText = textarea ? textarea.value : buildNovAgendaText();
+
+  const parts = [];
+  parts.push(docxParagraph(`${teamName} — Team Project Plan`, { bold: true, size: 32 }));
+  parts.push(docxParagraph(`${schoolYear} · Exported ${exportDate}`, { italic: true, size: 20, color: '666666' }));
+
+  // ── Section 1: November Agenda (the editable draft, as-is on export) ──
+  parts.push(docxParagraph('November Check-In Agenda', { heading: 1, spaceBefore: 360 }));
+  parts.push(docxTextBlock(agendaText));
+
+  // ── Section 2: Per-goal detail ──
+  parts.push(docxParagraph('Goals & Plans', { heading: 1, spaceBefore: 480 }));
+  const validGoals = goals.filter(g => g.teamGoal || g.specificOutcome || g.selectedGoalNum);
+  if (!validGoals.length) {
+    parts.push(docxParagraph('No goals recorded yet.', { italic: true }));
+  }
+  validGoals.forEach((g, i) => {
+    const goalLabel = g.goalNickname || g.teamGoal || g.specificOutcome || `Goal ${i + 1}`;
+    parts.push(docxParagraph(`Goal ${i + 1}: ${goalLabel}`, { heading: 2, spaceBefore: 320 }));
+    if (g.teamGoal && g.teamGoal !== goalLabel) {
+      parts.push(docxParagraph(g.teamGoal));
+    }
+
+    const evidenceItems = (g.evidenceItems || []).filter(e => e.text && e.text.trim());
+    if (evidenceItems.length) {
+      parts.push(docxParagraph('Evidence', { bold: true, spaceBefore: 200 }));
+      parts.push(docxTable(
+        ['Evidence', 'Collect by'],
+        evidenceItems.map(e => [e.text, e.collectMonth || '—']),
+        [75, 25]
+      ));
+    }
+
+    const roles = (g.roles || []).filter(r => r.name || r.responsibility);
+    if (roles.length) {
+      parts.push(docxParagraph('Roles & Responsibilities', { bold: true, spaceBefore: 200 }));
+      parts.push(docxTable(
+        ['What', 'Who', 'By when'],
+        roles.map(r => [r.responsibility || '—', r.name || 'Unassigned', r.byWhen || '—']),
+        [55, 25, 20]
+      ));
+    }
+  });
+
+  // ── Section 3: Cross-Goal Responsibilities ──
+  const crossGoalRoles = (pmData?.crossGoalRoles || []).filter(r => r.name || r.responsibility);
+  parts.push(docxParagraph('Cross-Goal Responsibilities', { heading: 1, spaceBefore: 480 }));
+  if (crossGoalRoles.length) {
+    parts.push(docxTable(
+      ['Who', 'Responsibility', 'Cadence'],
+      crossGoalRoles.map(r => [r.name || 'Unassigned', r.responsibility || '—', r.cadence || '—']),
+      [20, 55, 25]
+    ));
+  } else {
+    parts.push(docxParagraph('No cross-goal responsibilities assigned yet.', { italic: true }));
+  }
+
+  // ── Section 4: Meeting Cadence ──
+  parts.push(docxParagraph('Meeting Cadence', { heading: 1, spaceBefore: 480 }));
+  const cadenceRows = PM_CHECKPOINT_MONTHS.map(mo => [
+    mo,
+    PM_CHECKPOINT_SHORT[mo] || mo,
+    (pmData?.checkpointDates?.[mo] || '').trim() || 'Not yet set'
+  ]);
+  parts.push(docxTable(['Month', 'Focus', 'Date'], cadenceRows, [20, 45, 35]));
+
+  // ── Section 5: Tasks Due Before November ──
+  parts.push(docxParagraph('Tasks Due Before Your November Meeting', { heading: 1, spaceBefore: 480 }));
+  const flatTasks = [];
+  (pmData?.crossGoalRoles || []).forEach(r => {
+    if (!r.responsibility || !isDueByNovember(r.cadence)) return;
+    flatTasks.push([r.responsibility, r.name || 'Unassigned', r.cadence]);
+  });
+  validGoals.forEach((g, gi) => {
+    (g.roles || []).forEach(r => {
+      if (!r.responsibility || !isDueByNovember(r.byWhen)) return;
+      flatTasks.push([`${r.responsibility} (Goal ${gi + 1})`, r.name || 'Unassigned', r.byWhen]);
+    });
+  });
+  if (flatTasks.length) {
+    parts.push(docxTable(['Task', 'Who', 'Due'], flatTasks, [55, 25, 20]));
+  } else {
+    parts.push(docxParagraph('No tasks marked due before November yet.', { italic: true }));
+  }
+
+  return parts.join('');
+}
+
+async function exportTeamPlanDocx() {
   const teamName = localStorage.getItem('htsd_checkin_team') || 'Team';
-  const lines = text.split('\n');
-
-  const escXml = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-  const paragraphs = lines.map((line, i) => {
-    const isTitle = i === 0;
-    const runProps = isTitle ? '<w:rPr><w:b/><w:sz w:val="28"/></w:rPr>' : '<w:rPr><w:sz w:val="22"/></w:rPr>';
-    const safeLine = escXml(line) || ' ';
-    return `<w:p>${isTitle ? '' : ''}<w:r>${runProps}<w:t xml:space="preserve">${safeLine}</w:t></w:r></w:p>`;
-  }).join('');
+  const bodyParagraphs = buildTeamPlanDocxParagraphs();
 
   const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
   <w:body>
-    ${paragraphs}
+    ${bodyParagraphs}
     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>
   </w:body>
 </w:document>`;
+
+  const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:sz w:val="22"/></w:rPr></w:style>
+  <w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/>
+    <w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr>
+    <w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="1B4FA8"/></w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/>
+    <w:pPr><w:spacing w:before="160" w:after="80"/></w:pPr>
+    <w:rPr><w:b/><w:sz w:val="24"/></w:rPr>
+  </w:style>
+</w:styles>`;
 
   const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
 </Types>`;
 
   const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -1813,26 +1967,30 @@ async function exportNovAgendaDocx() {
 </Relationships>`;
 
   const docRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`;
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
 
   const zip = new JSZip();
   zip.file('[Content_Types].xml', contentTypesXml);
   zip.folder('_rels').file('.rels', rootRelsXml);
   const wordFolder = zip.folder('word');
   wordFolder.file('document.xml', documentXml);
+  wordFolder.file('styles.xml', stylesXml);
   wordFolder.folder('_rels').file('document.xml.rels', docRelsXml);
 
   const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${teamName.replace(/[^\w\- ]/g,'').trim() || 'Team'} - November Check-In Agenda.docx`;
+  a.download = `${teamName.replace(/[^\w\- ]/g,'').trim() || 'Team'} - Project Plan.docx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('Agenda downloaded.', 'success');
+  showToast('Team Project Plan downloaded.', 'success');
 }
+
 
 // ----------------------------------------------------------
 // REMOVE / CLEAR LINK
