@@ -1638,6 +1638,7 @@ function renderCheckinCrossGoalTimeline() {
     const label = g.goalNickname || g.teamGoal || `Goal ${gi + 1}`;
     return {
       label,
+      goalIdx: gi,
       color: GOAL_COLORS[gi % GOAL_COLORS.length],
       startIdx: monthIdxs.length ? Math.min(...monthIdxs) : null,
       endIdx: monthIdxs.length ? Math.max(...monthIdxs) : null,
@@ -1667,8 +1668,15 @@ function renderCheckinCrossGoalTimeline() {
     // A goal with no evidence collection months set gets an empty track —
     // easy to misread as "this goal is missing" rather than "no dates set
     // yet", especially once the label itself might also wrap to 2 lines.
-    // Label it explicitly so nothing looks silently dropped.
-    const noDatesNote = hasDates ? '' : '<div style="font-size:11px;color:var(--text-muted);font-style:italic;margin-top:2px;">No collection dates set yet</div>';
+    // Label it explicitly, AND make it a direct link into that goal's
+    // Evidence & Owners step (Brittany, 2026-09-18: teams should be able to
+    // navigate straight back and add an evidence plan they skipped, not
+    // just see that it's missing) — jumpToGoalEvidenceFromPlan() switches
+    // phase, jumps to the wizard, and makes Back/Finish return here to the
+    // Project Plan instead of the Review Goals summary or the next goal.
+    const noDatesNote = hasDates ? '' : `<div style="font-size:11px;margin-top:2px;">
+      <a href="#" onclick="event.preventDefault();jumpToGoalEvidenceFromPlan(${r.goalIdx});" style="color:var(--hampton-blue);font-weight:600;text-decoration:underline;">+ Add your evidence plan</a>
+    </div>`;
     return `<div style="display:flex;align-items:flex-start;margin-bottom:12px;">
       <div style="width:${labelColW}px;flex-shrink:0;font-size:12.5px;font-weight:600;color:var(--text);padding-right:10px;line-height:1.35;word-wrap:break-word;">${esc(r.label)}${noDatesNote}</div>
       <div style="padding-top:2px;">${track}</div>
@@ -2885,6 +2893,22 @@ function hideAllCheckinViews() {
 // or date in Cross-Goal Responsibilities.
 let checkinKickoffReturnTo = null;
 
+// Same pattern, for jumping straight into a specific goal's Evidence &
+// Owners step FROM the Project Plan close-out (e.g. the Cross-Goal Timeline
+// flagging a goal with no evidence collection dates set). Tracked
+// separately from checkinKickoffReturnTo since this jump lands on a
+// different view (the goal wizard, not Kickoff) and needs its own "did we
+// get here from Project Plan" flag so the wizard's Back button and Finish
+// button both know to return there instead of the Review Goals summary /
+// the next goal in line.
+let checkinGoalWizardReturnToPlan = false;
+
+function jumpToGoalEvidenceFromPlan(idx) {
+  checkinGoalWizardReturnToPlan = true;
+  if (currentPhase !== 'goals') switchPhase('goals');
+  startCheckinGoalWizard(idx);
+}
+
 function showCheckinKickoff(teamName, returnTo) {
   checkinKickoffReturnTo = returnTo || null;
   // checkinKickoffView physically lives inside phaseView-goals — if we're
@@ -3104,6 +3128,15 @@ function goToCheckinStep(step) {
 
 function finishCheckinGoal() {
   saveCheckinRolesStep();
+  // Arrived here via a direct jump from the Project Plan close-out (e.g.
+  // "add your evidence plan" on a flagged goal) — return there directly
+  // instead of marching through every other goal's wizard first. The team
+  // came to fix one specific thing, not to redo the whole Review Goals flow.
+  if (checkinGoalWizardReturnToPlan) {
+    checkinGoalWizardReturnToPlan = false;
+    tryAdvanceToProjectPlan();
+    return;
+  }
   if (activeGoalIdx < goals.length - 1) {
     startCheckinGoalWizard(activeGoalIdx + 1);
   } else {
@@ -3118,6 +3151,14 @@ function finishCheckinGoal() {
 function backToCheckinSummary() {
   if (checkinStep === 'evidence') saveCheckinEvidenceStep();
   if (checkinStep === 'roles') saveCheckinRolesStep();
+  // Same "came from Project Plan" check as finishCheckinGoal() — Back
+  // should return there too, not to Review Goals, when that's where the
+  // team actually came from.
+  if (checkinGoalWizardReturnToPlan) {
+    checkinGoalWizardReturnToPlan = false;
+    tryAdvanceToProjectPlan();
+    return;
+  }
   hideAllCheckinViews();
   document.getElementById('checkinSummaryView').style.display = '';
   renderCheckinSummary();
