@@ -1120,19 +1120,6 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 
     <div class="section">
       <div class="section-header">
-        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">✓</div>
-        <div>
-          <div class="section-title">Tasks Due Before Your November Meeting</div>
-          <div class="section-desc">Everything ongoing or due by your next check-in — this is your to-do list for the next two months.</div>
-        </div>
-      </div>
-      <div id="checkinNovDueTasks"></div>
-    </div>
-
-    <hr class="pm-divider">
-
-    <div class="section">
-      <div class="section-header">
         <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">🗓️</div>
         <div>
           <div class="section-title">Cross-Goal Timeline</div>
@@ -1153,6 +1140,19 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
         </div>
       </div>
       <div id="checkinPersonTaskLists"></div>
+    </div>
+
+    <hr class="pm-divider">
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">✓</div>
+        <div>
+          <div class="section-title">Tasks Due Before Your November Meeting</div>
+          <div class="section-desc">Everything ongoing or due by your next check-in — this is your to-do list for the next two months.</div>
+        </div>
+      </div>
+      <div id="checkinNovDueTasks"></div>
     </div>
 
     <hr class="pm-divider">
@@ -1639,7 +1639,15 @@ function renderCheckinCrossGoalTimeline() {
       .filter(e => e.text && e.text.trim() && e.collectMonth)
       .map(e => CHART_MONTHS.indexOf(e.collectMonth))
       .filter(idx => idx !== -1);
-    const label = g.goalNickname || g.teamGoal || `Goal ${gi + 1}`;
+    // Show the FULL goal language, not the short goalNickname -- every
+    // goal carried over from spring (SPRING_GOALS) gets an auto-generated
+    // goalNickname that's just a raw 30-character slice of teamGoal with
+    // no "..." (see startCheckin()), so it read as cut-off mid-sentence
+    // rather than an intentional short name. Brittany, 2026-09-18: "the
+    // cross-goal timeline doesn't show the full goal language" -- she'd
+    // rather see the whole thing and have rows grow taller than lose any
+    // of it.
+    const label = g.teamGoal || g.goalNickname || `Goal ${gi + 1}`;
     return {
       label,
       goalIdx: gi,
@@ -1666,7 +1674,7 @@ function renderCheckinCrossGoalTimeline() {
   // normal per-row rendering instead, which still gives each goal its own
   // empty track plus a working link into that goal's Evidence step.
 
-  const labelColW = 190;
+  const labelColW = 260; // widened to fit full goal text, not just a short nickname
   const monthColW = 44;
   const header = `<div style="display:flex;margin-bottom:4px;"><div style="width:${labelColW}px;flex-shrink:0;"></div>${CHART_MONTHS.map(mo => `<div style="width:${monthColW}px;flex-shrink:0;text-align:center;font-size:12.5px;font-weight:700;color:var(--text-muted);">${mo}</div>`).join('')}</div>`;
 
