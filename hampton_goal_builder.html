@@ -2105,7 +2105,7 @@ const PM_CHECKPOINT_FOCUS = {
 // and the "Focus" column in the table-based renders), this is just what
 // fits directly on the visual.
 const PM_CHECKPOINT_SHORT = {
-  Sep: 'Baselines & norms',
+  Sep: 'Design Team Fall Workshop',
   Nov: 'Monitor & adjust',
   Jan: 'Mid-year review',
   Mar: 'Expand & refine',
@@ -2139,7 +2139,7 @@ function initPmData() {
       crossGoalRoles: PM_DEFAULT_ROLES.map(r => ({...r})),
       checkpointDates: {Sep:'',Nov:'',Jan:'',Mar:'',May:''},
     };
-    // Pre-fill the Sep (Baselines & Norms) checkpoint with this team's real
+    // Pre-fill the Sep (Design Team Fall Workshop) checkpoint with this team's real
     // fall meeting date, so the timeline shows 9/29 or 9/30 instead of a
     // blank field. Only applies to brand-new pmData for a team in check-in
     // mode, and only when a known team maps to a date — never overwrites
@@ -3331,7 +3331,7 @@ const TEAM_ROSTERS = {
 
 // Confirmed Sept 29-30, 2026 fall design-team meeting schedule (from
 // Brittany's team roster doc): Central, HMS, and HHS meet 9/29; Wyland and
-// Poff meet 9/30. Used to pre-fill the Baselines & Norms (Sep) checkpoint
+// Poff meet 9/30. Used to pre-fill the Design Team Fall Workshop (Sep) checkpoint
 // date on the Cross-Goal Responsibilities / Meeting Cadence timeline so
 // each team sees their actual meeting date instead of a blank field.
 const TEAM_MEETING_DAY = {
