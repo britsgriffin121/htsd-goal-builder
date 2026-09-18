@@ -1999,7 +1999,7 @@ function buildTeamPlanDocxParagraphs() {
   const cadenceRows = PM_CHECKPOINT_MONTHS.map(mo => [
     mo,
     PM_CHECKPOINT_SHORT[mo] || mo,
-    (pmData?.checkpointDates?.[mo] || '').trim() || 'Not yet set'
+    PM_CHECKPOINT_TBD[mo] ? PM_TBD_DATE_LABEL : ((pmData?.checkpointDates?.[mo] || '').trim() || 'Not yet set')
   ]);
   parts.push(docxTable(['Month', 'Focus', 'Date'], cadenceRows, [20, 45, 35]));
 
@@ -2401,6 +2401,14 @@ const PM_CHECKPOINT_HOST = {
   Mar: 'lcc',
   May: 'team',
 };
+
+// Checkpoints an LCC-hosted workshop schedules FOR teams -- no date picker,
+// since there's nothing for the team to decide. Currently just March
+// (Expand & Refine): the date isn't set yet and teams shouldn't be asked to
+// guess or lock one in. Brittany, 2026-09-18: "this will be scheduled but
+// is currently TBD... teams do not need to pick a date for this."
+const PM_CHECKPOINT_TBD = { Mar: true };
+const PM_TBD_DATE_LABEL = 'Date TBD · LCC will schedule';
 const HOST_BADGE_LABEL = { lcc: 'LCC-facilitated', team: 'Your team hosts' };
 
 let pmData = null;
@@ -2626,6 +2634,13 @@ function renderPmCadence() {
     // tooltip to its left edge and the last node's to its right edge so the
     // full card stays on-screen instead of spilling past the row.
     const tipAlignClass = isFirstOverall ? 'cadence-node-tooltip-left' : (isLast ? 'cadence-node-tooltip-right' : '');
+    // TBD checkpoints (currently just March) are scheduled BY LCC, not
+    // picked by the team -- show plain text instead of an editable date
+    // input, so there's nothing here that looks like it's waiting on the
+    // team to fill in.
+    const dateFieldHtml = PM_CHECKPOINT_TBD[mo]
+      ? `<div style="margin-top:8px;font-size:13px;color:var(--text-muted);font-style:italic;">${esc(PM_TBD_DATE_LABEL)}</div>`
+      : `<input type="date" class="cadence-date-input" value="${esc(dateVal)}" oninput="pmUpdateCheckpoint('${mo}',this.value)" style="margin-top:8px;width:100%;max-width:140px;font-size:14.5px;" />`;
     return `
       <div style="flex:1;min-width:120px;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;">
         ${!isLast ? `<div style="position:absolute;top:15px;left:50%;width:100%;height:3px;background:var(--border-strong);z-index:0;"></div>` : ''}
@@ -2635,7 +2650,7 @@ function renderPmCadence() {
           <span class="cadence-node-tooltip ${tipAlignClass}">${esc(PM_CHECKPOINT_FOCUS[mo])}</span>
         </div>
         <div class="cadence-host-badge cadence-host-badge-${PM_CHECKPOINT_HOST[mo]}" style="margin-top:6px;">${esc(HOST_BADGE_LABEL[PM_CHECKPOINT_HOST[mo]])}</div>
-        <input type="date" class="cadence-date-input" value="${esc(dateVal)}" oninput="pmUpdateCheckpoint('${mo}',this.value)" style="margin-top:8px;width:100%;max-width:140px;font-size:14.5px;" />
+        ${dateFieldHtml}
       </div>`;
   }).join('');
 
@@ -4855,9 +4870,13 @@ function exportAllGoalsPDF() {
     .filter(item => item.score < 7);
 
   // ── PM HARD BLOCK CHECK ──────────────────────────────────────────────────
+  // March is LCC-scheduled (PM_CHECKPOINT_TBD), so it's excluded from the
+  // "all checkpoints set" requirement -- teams were never given a way to
+  // set it, so requiring it would make this un-passable.
   const namedRoles = (pmData?.crossGoalRoles||[]).filter(r => r.name && r.name.trim()).length;
-  const datesSet = Object.values(pmData?.checkpointDates||{}).filter(v => v && v.trim()).length;
-  const pmBlocked = namedRoles < 3 || datesSet < 5;
+  const datableMonths = PM_CHECKPOINT_MONTHS.filter(mo => !PM_CHECKPOINT_TBD[mo]);
+  const datesSet = datableMonths.filter(mo => (pmData?.checkpointDates?.[mo]||'').trim()).length;
+  const pmBlocked = namedRoles < 3 || datesSet < datableMonths.length;
   // ─────────────────────────────────────────────────────────────────────────
 
   const readyContent    = document.getElementById('exportReadyContent');
@@ -4885,10 +4904,10 @@ function exportAllGoalsPDF() {
       </div>`;
     });
     if (pmBlocked) {
-      const missingMonths = PM_CHECKPOINT_MONTHS.filter(mo => !(pmData?.checkpointDates?.[mo] || '').trim());
+      const missingMonths = PM_CHECKPOINT_MONTHS.filter(mo => !PM_CHECKPOINT_TBD[mo] && !(pmData?.checkpointDates?.[mo] || '').trim());
       const checkpointMsg = missingMonths.length
         ? `Add a date for your ${missingMonths.join(', ').replace(/, ([^,]*)$/, ' and $1')} checkpoints.`
-        : 'Schedule all 5 review checkpoints.';
+        : 'Schedule your remaining review checkpoints.';
       allItems.push(
         `<div style="display:flex;align-items:flex-start;gap:10px;padding:11px 12px;background:#FFF1F0;border:1.5px solid #EF4444;border-radius:8px;">
           <span style="font-size:18.5px;flex-shrink:0;">🗂</span>
@@ -5267,9 +5286,10 @@ function runExportAllGoalsPDF() {
         // Focus
         doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(...DGRAY);
         focusLines.forEach((l, li) => doc.text(l, pML + cMonthW + 3, y + 5.5 + li * 4.5));
-        // Meeting Date
+        // Meeting Date -- March is LCC-scheduled/TBD, not team-picked
         doc.setFont('helvetica','bold'); doc.setFontSize(7.5); doc.setTextColor(...BLACK);
-        doc.text(pmDates[mo]||'—', pML + cMonthW + cFocusW + 3, y + 5.5);
+        const dateCellText = PM_CHECKPOINT_TBD[mo] ? 'TBD — LCC schedules' : (pmDates[mo]||'—');
+        doc.text(dateCellText, pML + cMonthW + cFocusW + 3, y + 5.5);
         doc.setDrawColor(...MGRAY); doc.setLineWidth(0.2);
         doc.line(pML, y + rowH, pML + pCW, y + rowH);
         y += rowH;
