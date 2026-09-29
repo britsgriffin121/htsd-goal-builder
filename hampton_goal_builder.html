@@ -406,6 +406,13 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
    summer pages -- hide it; teams navigate with on-page buttons. (9/28) */
 body.checkin-mode #phaseStepper{display:none !important}
 /* "Who" name not on the team roster -- soft flag, not an error */
+select.ev-collect-month.needs-month{border:1.5px solid #F59E0B !important;background:#FFFBEB !important;border-radius:6px}
+.ev-month-counter{font-size:15px;font-weight:600;margin:4px 0 10px;display:flex;align-items:center;gap:8px}
+.ev-month-counter.ok{color:var(--success)}
+.ev-month-counter.gap{color:#92400E}
+.ev-check-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:8px;margin-bottom:6px;font-size:15.5px;line-height:1.45}
+.ev-check-row.ok{background:#F0FDF4;border:1px solid #BBF7D0}
+.ev-check-row.gap{background:#FFFBEB;border:1.5px solid #F59E0B}
 input.roster-unknown{border-color:#F59E0B !important;background:#FFFBEB !important;box-shadow:0 0 0 2px rgba(245,158,11,0.25)}
 </style>
 </head>
@@ -752,7 +759,7 @@ input.roster-unknown{border-color:#F59E0B !important;background:#FFFBEB !importa
     </div>
 
     <div style="display:flex;justify-content:flex-end;margin-top:20px;">
-      <button class="btn-primary" onclick="goToCheckinStep('roles')">Next: Roles →</button>
+      <button class="btn-primary" onclick="nextFromCheckinEvidence()">Next: Roles →</button>
     </div>
   </div>
 </div>
@@ -1118,6 +1125,8 @@ input.roster-unknown{border-color:#F59E0B !important;background:#FFFBEB !importa
       <button type="button" onclick="document.getElementById('checkinDownloadSection')?.scrollIntoView({behavior:'smooth', block:'start'})" style="margin-top:14px;background:#fff;color:var(--hampton-blue);border:none;border-radius:8px;padding:10px 16px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;position:relative;z-index:1;">⬇ Jump to your agenda &amp; Word doc</button>
     </div>
 
+    <div id="checkinEvidenceCheck" style="margin:18px 0 6px;"></div>
+
     <div class="section">
       <div class="section-header">
         <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">📅</div>
@@ -1230,7 +1239,7 @@ input.roster-unknown{border-color:#F59E0B !important;background:#FFFBEB !importa
     <h2 id="confirmModalTitle" style="margin-bottom:10px;">Clear this goal?</h2>
     <p id="confirmModalBody" style="margin-bottom:22px;">This will reset all fields for the current goal tab. Other goals will not be affected.</p>
     <div style="display:flex;gap:10px;justify-content:center;">
-      <button class="btn-secondary" onclick="document.getElementById('confirmClearModal').classList.remove('open')">Cancel</button>
+      <button class="btn-secondary" id="confirmModalCancel" onclick="document.getElementById('confirmClearModal').classList.remove('open')">Cancel</button>
       <button class="btn-primary" id="confirmModalAction" style="background:#c0392b;border-color:#c0392b;" onclick="confirmClear()">Yes, clear everything</button>
     </div>
   </div>
@@ -1490,7 +1499,37 @@ function updateNickname() {
 // show up in the exported PDF: a cross-goal timeline of when evidence is
 // being collected, and a per-person view of everything each teammate owns
 // across all goals plus any cross-goal responsibilities assigned to them.
+function renderCheckinEvidenceCheck() {
+  const el = document.getElementById('checkinEvidenceCheck');
+  if (!el) return;
+  const rows = goals.map((g, i) => {
+    const gp = evidenceGaps(g);
+    const label = `Goal ${i + 1}`;
+    const text = esc((g.teamGoal || g.specificOutcome || '').slice(0, 90)) + ((g.teamGoal || '').length > 90 ? '…' : '');
+    if (!gp.noEvidence && gp.missing === 0) {
+      return `<div class="ev-check-row ok"><span><strong>✓ ${label}</strong> · ${text}</span><span style="white-space:nowrap;color:var(--success);font-weight:600;">${gp.total} item${gp.total === 1 ? '' : 's'} ready</span></div>`;
+    }
+    const what = gp.noEvidence ? 'No evidence yet' : `${gp.missing} item${gp.missing === 1 ? ' needs' : 's need'} a collection month`;
+    return `<div class="ev-check-row gap"><span><strong>⚠ ${label}</strong> · ${text}<br><span style="color:#92400E;font-weight:600;">${what}</span></span>
+      <button class="btn-secondary" style="white-space:nowrap;padding:6px 12px;font-size:14.5px;" onclick="jumpToGoalEvidenceFromPlan(${i})">Fix it →</button></div>`;
+  });
+  const gaps = goals.filter(goalHasEvidenceGap).length;
+  el.innerHTML = `<div class="section" style="margin-bottom:0;">
+    <div class="section-header">
+      <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">🔎</div>
+      <div>
+        <div class="section-title">Evidence Check</div>
+        <div class="section-desc">${gaps
+          ? `${gaps} goal${gaps === 1 ? ' still needs' : 's still need'} evidence decisions. Evidence without a collection month won't appear on your timeline, November tasks, or agenda.`
+          : 'Every goal has evidence with a collection month. Nice work.'}</div>
+      </div>
+    </div>
+    ${rows.join('')}
+  </div>`;
+}
+
 function renderCheckinCloseout() {
+  renderCheckinEvidenceCheck();
   renderPmView();
   renderCheckinNovDueTasks();
   renderCheckinCrossGoalTimeline();
@@ -1906,6 +1945,20 @@ function buildNovAgendaText() {
   lines.push('');
   itemNum++;
 
+  // Leftover evidence gaps become an explicit agenda item, not silence.
+  const gapLines = [];
+  goals.forEach((g, gi) => {
+    const gp = evidenceGaps(g);
+    if (gp.noEvidence) gapLines.push(`   - Goal ${gi + 1}: decide what evidence you'll collect`);
+    else if (gp.missing) gapLines.push(`   - Goal ${gi + 1}: set collection months for ${gp.missing} evidence item${gp.missing === 1 ? '' : 's'}`);
+  });
+  if (gapLines.length) {
+    lines.push(`${itemNum}. Finalize your evidence plan (10 min)`);
+    lines.push(...gapLines);
+    lines.push('');
+    itemNum++;
+  }
+
   lines.push(`${itemNum}. Adjust supports or redistribute workload as needed (10 min)`);
   lines.push('   Is anyone overloaded? Does a timeline need to shift?');
   lines.push('');
@@ -2126,7 +2179,7 @@ function buildTeamPlanDocxParagraphs() {
       parts.push(docxParagraph('Evidence', { bold: true, color: DOCX_NAVY, spaceBefore: 160, caps: true, size: 18 }));
       parts.push(docxTable(
         ['Evidence', 'Target benchmark', 'Collect by'],
-        evidenceItems.map(e => [e.text, (e.benchmark || '').trim() || '—', e.collectMonth || '—']),
+        evidenceItems.map(e => [e.text, (e.benchmark || '').trim() || '—', e.collectMonth || 'Not yet set']),
         [50, 32, 18],
         gc
       ));
@@ -2406,6 +2459,16 @@ function showConfirmModal(titleText, bodyText, confirmLabel, onConfirm, opts) {
   const confirmBtn = document.getElementById('confirmModalAction');
   if (title) title.textContent = titleText;
   if (body) body.textContent = bodyText;
+  // Optional custom cancel button (label + extra action). Always reset, so
+  // one modal's custom label never leaks into the next.
+  const cancelBtn = document.getElementById('confirmModalCancel');
+  if (cancelBtn) {
+    cancelBtn.textContent = (opts && opts.cancelLabel) || 'Cancel';
+    cancelBtn.onclick = () => {
+      modal?.classList.remove('open');
+      if (opts && typeof opts.onCancel === 'function') opts.onCancel();
+    };
+  }
   if (confirmBtn) {
     const btnColor = tone === 'neutral' ? 'var(--hampton-blue)' : '#c0392b';
     confirmBtn.style.background = btnColor;
@@ -3702,6 +3765,66 @@ function seedEvidenceCollectionTasks(g) {
   });
 }
 
+// ── Evidence gap helpers (added 9/28) ───────────────────────────────────────
+// Evidence with no collection month silently drops out of the timeline, the
+// November tasks, and the agenda -- so the gap is surfaced at every stage:
+// the evidence step itself, leaving it, the Project Plan, and the exports.
+function evidenceGaps(g) {
+  const items = (g?.evidenceItems || []).filter(e => e.text && e.text.trim());
+  const missing = items.filter(e => !e.collectMonth);
+  return { total: items.length, missing: missing.length, noEvidence: items.length === 0 };
+}
+
+function goalHasEvidenceGap(g) {
+  const gp = evidenceGaps(g);
+  return gp.noEvidence || gp.missing > 0;
+}
+
+// "Next: Roles" -- pause (never block) if this goal's evidence isn't ready.
+function nextFromCheckinEvidence() {
+  saveCheckinEvidenceStep();
+  const gp = evidenceGaps(goals[activeGoalIdx]);
+  if (!gp.noEvidence && gp.missing === 0) { goToCheckinStep('roles'); return; }
+  const body = gp.noEvidence
+    ? "This goal doesn't have any evidence yet. How will your team know it's working for learners? Evidence is what shows up on your timeline, your November tasks, and your agenda."
+    : `${gp.missing} of ${gp.total} evidence item${gp.total === 1 ? '' : 's'} ${gp.missing === 1 ? "doesn't" : "don't"} have a collection month yet. Without one, ${gp.missing === 1 ? "it won't" : "they won't"} show up on your timeline, your November tasks, or your agenda.`;
+  // "Fix it" is the prominent (blue) action; skipping is the quiet one --
+  // the pause should nudge toward completing evidence, not past it.
+  const focusGap = () => {
+    document.getElementById('confirmClearModal')?.classList.remove('open');
+    const target = gp.noEvidence
+      ? document.getElementById('checkinEvidenceInput')
+      : document.querySelector('#checkinAddedEvidenceList select.ev-collect-month.needs-month');
+    if (target) { target.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => target.focus(), 300); }
+  };
+  showConfirmModal(
+    gp.noEvidence ? 'No evidence for this goal yet' : 'Some evidence has no collection month',
+    body,
+    gp.noEvidence ? 'Add evidence now' : 'Set months now',
+    focusGap,
+    {
+      tone: 'neutral',
+      cancelLabel: 'Continue anyway',
+      onCancel: () => goToCheckinStep('roles')
+    }
+  );
+}
+
+// Keep the amber "needs a month" outlines and the "X of Y" counter in sync
+// as the team picks months (called from each month dropdown's onchange).
+function refreshEvidenceMonthState() {
+  const sels = Array.from(document.querySelectorAll('#checkinAddedEvidenceList select.ev-collect-month'));
+  sels.forEach(sel => sel.classList.toggle('needs-month', !sel.value));
+  const counter = document.getElementById('checkinEvMonthCounter');
+  if (!counter) return;
+  const total = sels.length, set = sels.filter(sel => sel.value).length;
+  counter.style.display = total ? '' : 'none';
+  counter.className = 'ev-month-counter ' + (set === total ? 'ok' : 'gap');
+  counter.textContent = set === total
+    ? `✓ All ${total} evidence item${total === 1 ? ' has a' : 's have a'} collection month`
+    : `⚠ ${set} of ${total} evidence items have a collection month`;
+}
+
 function goToCheckinStep(step) {
   // Persist whatever step we're leaving before painting the next one.
   if (checkinStep === 'evidence') saveCheckinEvidenceStep();
@@ -3877,9 +4000,10 @@ function renderCheckinAddedEvidence(g) {
   if (!list) return;
   const items = g.evidenceItems || [];
   if (!items.length) { list.innerHTML = ''; return; }
+  const counterHtml = `<div id="checkinEvMonthCounter" class="ev-month-counter"></div>`;
   const tierColors = {1:'ev-t1',2:'ev-t2',3:'ev-t3',4:'ev-t4',0:'ev-t0'};
   const tierLabels = {1:'T1 - Participation',2:'T2 - Perception',3:'T3 - Practice',4:'T4 - Impact',0:'Custom'};
-  list.innerHTML = items.map((e,i) => `
+  list.innerHTML = counterHtml + items.map((e,i) => `
     <div class="ev-item" data-text="${esc(e.text)}" data-tier="${e.tier||0}">
       <div class="ev-item-top">
         <div class="ev-tier-dot ${tierColors[e.tier||0]}"></div>
@@ -3893,12 +4017,13 @@ function renderCheckinAddedEvidence(g) {
       </div>
       <div class="ev-benchmark-row">
         <label>When will you collect this?</label>
-        <select class="ev-collect-month" onchange="saveCheckinGoal()">
+        <select class="ev-collect-month${e.collectMonth ? '' : ' needs-month'}" onchange="saveCheckinGoal();refreshEvidenceMonthState()">
           <option value="" ${!e.collectMonth ? 'selected' : ''}>Choose a month…</option>
           ${checkinMonths(e.collectMonth).map(mo => `<option value="${mo}"${mo === e.collectMonth ? ' selected' : ''}>${mo}</option>`).join('')}
         </select>
       </div>
     </div>`).join('');
+  refreshEvidenceMonthState();
 }
 
 // Task/action first, then who, then when — per Brittany's review feedback.
