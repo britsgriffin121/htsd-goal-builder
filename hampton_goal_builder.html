@@ -10,6 +10,8 @@
 <style>
 :root{--hampton-blue:#1B4FA8;--hampton-gold:#F5C518;--hampton-gold-dark:#C49A10;--hampton-blue-light:#E8EFF9;--hampton-blue-mid:#3B6DD4;--bg:#F7F6F2;--surface:#FFFFFF;--surface-2:#F0EDE6;--text:#1A1916;--text-muted:#6B6860;--text-light:#9B9890;--border:rgba(26,25,22,0.1);--border-strong:rgba(26,25,22,0.2);--success:#2D7D46;--success-bg:#EAF5EE;--warn:#B45309;--warn-bg:#FEF3C7;--empty:#D1CFC8;--radius:10px;--radius-sm:6px}
 *{box-sizing:border-box;margin:0;padding:0}
+/* Larger text for group work (9/30 feedback). Scales the whole page like browser zoom. Override with ?size=1 (or 1.1, 1.3) in the URL. */
+html{--z:1.2;zoom:var(--z)}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:19.5px;line-height:1.6}
 .header{background:var(--hampton-blue);padding:0;display:flex;align-items:stretch}
 .header-accent{width:8px;background:var(--hampton-gold);flex-shrink:0}
@@ -213,7 +215,7 @@ body.checkin-mode .reflection-nudge{display:block}
 @media (max-width:760px){.goal-nav{padding:10px 16px;align-items:flex-start;flex-direction:column}.goal-nav-tabs{width:100%}}
 .layout{display:grid;grid-template-columns:1fr min(270px,22vw);gap:0}
 .main-form{padding:24px 28px}
-.sidebar{background:var(--surface);border-left:1px solid var(--border);padding:18px 16px;position:sticky;top:0;max-height:100vh;overflow-y:auto;align-self:start}
+.sidebar{background:var(--surface);border-left:1px solid var(--border);padding:18px 16px;position:sticky;top:0;max-height:calc(100vh / var(--z,1));overflow-y:auto;align-self:start}
 /* ── Layout ── */
 /* Goal complete indicator on tab */
 .goal-tab.tab-complete .goal-tab-num{background:var(--success)!important;color:#fff!important}
@@ -380,7 +382,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 .toast.warn{background:#92400E;color:#fff;max-width:420px;line-height:1.4}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:none;align-items:flex-end;justify-content:center;padding-bottom:24px}
 .modal-overlay.open{display:flex}
-.modal{background:var(--surface);border-radius:16px;padding:28px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 -4px 40px rgba(0,0,0,0.18)}
+.modal{background:var(--surface);border-radius:16px;padding:28px;max-width:520px;width:90%;max-height:calc(80vh / var(--z,1));overflow-y:auto;box-shadow:0 -4px 40px rgba(0,0,0,0.18)}
 .modal h2{font-family:'DM Serif Display',serif;font-size:23px;font-weight:400;color:var(--hampton-blue);margin-bottom:8px}
 .modal p{font-size:18.5px;color:var(--text-muted);margin-bottom:16px;line-height:1.6}
 
@@ -415,6 +417,7 @@ select.ev-collect-month.needs-month{border:1.5px solid #F59E0B !important;backgr
 .ev-check-row.gap{background:#FFFBEB;border:1.5px solid #F59E0B}
 input.roster-unknown{border-color:#F59E0B !important;background:#FFFBEB !important;box-shadow:0 0 0 2px rgba(245,158,11,0.25)}
 </style>
+<script>try{var __sz=new URLSearchParams(location.search).get('size');if(__sz&&!isNaN(+__sz)&&+__sz>=0.8&&+__sz<=2)document.documentElement.style.setProperty('--z',__sz);}catch(e){}</script>
 </head>
 <body>
 
