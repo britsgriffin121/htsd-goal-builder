@@ -1588,7 +1588,7 @@ function renderCheckinNovDueTasks() {
   const container = document.getElementById('checkinNovDueTasks');
   if (!container) return;
 
-  const GOAL_COLORS = ['#1B4FA8', '#E84D98', '#19D3C5', '#888888', '#2C3E50'];
+  const GOAL_COLORS = ['#1B4FA8', '#E84D98', '#19D3C5', '#888888', '#2C3E50', '#6D28D9', '#B45309'];
   const flatTasks = [];
 
   (pmData?.crossGoalRoles || []).forEach(r => {
@@ -1634,7 +1634,7 @@ function renderCheckinCrossGoalTimeline() {
   const container = document.getElementById('checkinTimelineVis');
   if (!container) return;
   const CHART_MONTHS = ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
-  const GOAL_COLORS = ['#1B4FA8','#E84D98','#19D3C5','#888888','#2C3E50'];
+  const GOAL_COLORS = ['#1B4FA8','#E84D98','#19D3C5','#888888','#2C3E50','#6D28D9','#B45309'];
 
   // Check-in mode has no milestones/goalCompletionMonth — the equivalent
   // "shape of the work" signal is each goal's spread of evidence collection
@@ -1743,7 +1743,7 @@ function renderCheckinPersonTaskLists() {
 
   const PERSON_COLORS = ['#1B4FA8','#19D3C5','#E84D98','#F5A623','#2C3E50'];
   const DUE_SORT = {Aug:1,Sep:2,Oct:3,Nov:4,Dec:5,Jan:6,Feb:7,Mar:8,Apr:9,May:10,Jun:11};
-  const GOAL_COLORS = ['#1B4FA8','#E84D98','#19D3C5','#888888','#2C3E50'];
+  const GOAL_COLORS = ['#1B4FA8','#E84D98','#19D3C5','#888888','#2C3E50','#6D28D9','#B45309'];
 
   container.innerHTML = people.map((person, pi) => {
     const pc = PERSON_COLORS[pi % PERSON_COLORS.length];
@@ -2038,7 +2038,7 @@ function docxTable(headers, rows, widthsPct, headerColor) {
 
 // Same rotation as the PDF export's GOAL_COLORS -- keeps goal color-coding
 // consistent between the Word doc and the PDF.
-const DOCX_GOAL_COLORS = ['1B4FA8', 'E84D98', '19D3C5', '888888', '2C3E50'];
+const DOCX_GOAL_COLORS = ['1B4FA8', 'E84D98', '19D3C5', '888888', '2C3E50', '6D28D9', 'B45309'];
 const DOCX_NAVY = '1B4FA8';
 const DOCX_PINK = 'E84D98';
 
@@ -2388,7 +2388,10 @@ async function exportTeamPlanDocx() {
 // ----------------------------------------------------------
 // REMOVE / CLEAR LINK
 // ----------------------------------------------------------
-function showConfirmModal(titleText, bodyText, confirmLabel, onConfirm) {
+// opts.tone: 'danger' (default, red confirm button, for removing/clearing)
+// or 'neutral' (Hampton blue, for a thinking-pause rather than a warning).
+function showConfirmModal(titleText, bodyText, confirmLabel, onConfirm, opts) {
+  const tone = (opts && opts.tone) || 'danger';
   const modal = document.getElementById('confirmClearModal');
   const title = document.getElementById('confirmModalTitle');
   const body = document.getElementById('confirmModalBody');
@@ -2396,6 +2399,9 @@ function showConfirmModal(titleText, bodyText, confirmLabel, onConfirm) {
   if (title) title.textContent = titleText;
   if (body) body.textContent = bodyText;
   if (confirmBtn) {
+    const btnColor = tone === 'neutral' ? 'var(--hampton-blue)' : '#c0392b';
+    confirmBtn.style.background = btnColor;
+    confirmBtn.style.borderColor = btnColor;
     confirmBtn.textContent = confirmLabel;
     confirmBtn.onclick = null;
     confirmBtn.onclick = onConfirm;
@@ -2510,7 +2516,7 @@ function renderMilestoneHeatmap(allGoals) {
   if (!container) return;
 
   const CHART_MONTHS = ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
-  const GOAL_COLORS = ['#1B4FA8','#E84D98','#19D3C5','#888888','#2C3E50'];
+  const GOAL_COLORS = ['#1B4FA8','#E84D98','#19D3C5','#888888','#2C3E50','#6D28D9','#B45309'];
 
   // Check-in mode has no Milestones step anymore — its closest equivalent
   // "when is work happening" signal is each evidence item's collection month.
@@ -2575,6 +2581,13 @@ function renderMilestoneHeatmap(allGoals) {
     <div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:8px;">${legendItems}</div>
   </div>`;
 }const MAX_GOALS = 5;
+// Fall check-in allows a little more room than summer planning: Hampton
+// Middle School carried 6 goals over from spring, and teams shouldn't have
+// to delete a spring goal just to add one on the day. Adding past
+// CHECKIN_GOAL_NUDGE_AT triggers a reflective pause (not a block) --
+// decided with Brittany 9/28: keep teams' agency, prompt focus, cap at 7.
+const MAX_CHECKIN_GOALS = 7;
+const CHECKIN_GOAL_NUDGE_AT = 5;
 let goals = []; // array of goal data objects
 let activeGoalIdx = 0;
 
@@ -3581,7 +3594,27 @@ function tryAdvanceToProjectPlan() {
 // CHECK-IN: ADD / REMOVE / EDIT-TEXT (Review Goals step)
 // ─────────────────────────────────────────────────────────────────────────────
 function startAddCheckinGoal() {
-  if (goals.length >= MAX_GOALS) { showToast(`Maximum ${MAX_GOALS} goals per team`, 'info'); return; }
+  if (goals.length >= MAX_CHECKIN_GOALS) {
+    showToast(`Your team has reached the ${MAX_CHECKIN_GOALS}-goal limit. To add a new one, combine or remove a goal first.`, 'info');
+    return;
+  }
+  if (goals.length >= CHECKIN_GOAL_NUDGE_AT) {
+    showConfirmModal(
+      'Before you add another goal…',
+      `Your team already has ${goals.length} goals. Is there one you could combine with this new idea, or one that's already running and just needs tracking? If this new goal still deserves its own focus this year, go ahead and add it.`,
+      'Add it anyway',
+      () => {
+        document.getElementById('confirmClearModal')?.classList.remove('open');
+        addCheckinGoalNow();
+      },
+      { tone: 'neutral' }
+    );
+    return;
+  }
+  addCheckinGoalNow();
+}
+
+function addCheckinGoalNow() {
   const identity = getLaunchIdentity();
   const blank = getBlankGoal();
   blank.teamName = identity.teamName;
@@ -5410,7 +5443,7 @@ function runExportAllGoalsPDF() {
     const TGRAY  = [136, 136, 136];
     const BLACK  = [26, 25, 22];
 
-    const GOAL_COLORS = [NAVY, PINK, TEAL, [107,114,128], [53,53,53]];
+    const GOAL_COLORS = [NAVY, PINK, TEAL, [107,114,128], [53,53,53], [109,40,217], [180,83,9]];
 
     const MONTH_ORDER = {Sum:0,Aug:1,Sep:2,Oct:3,Nov:4,Dec:5,Jan:6,Feb:7,Mar:8,Apr:9,May:10,Jun:11};
     const ALL_MONTHS  = ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
@@ -5521,7 +5554,7 @@ function runExportAllGoalsPDF() {
 
     // ── OVERVIEW — compact single-column list ────────────────────────────
     // Each row: color stripe + badge + full goal statement (2-3 lines)
-    const GOAL_COLORS_OV = [NAVY, PINK, TEAL, [107,114,128], [53,53,53]];
+    const GOAL_COLORS_OV = [NAVY, PINK, TEAL, [107,114,128], [53,53,53], [109,40,217], [180,83,9]];
     const ovBadgeW = 18, ovPad = 6, ovStripe = 3;
     const ovTextW  = UW - ovStripe - ovBadgeW - ovPad * 2;
     const ovFontSz = 8;
