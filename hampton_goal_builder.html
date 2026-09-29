@@ -3755,6 +3755,24 @@ function startCheckinGoalWizard(idx) {
 function seedEvidenceCollectionTasks(g) {
   if (!g) return;
   g.roles = g.roles || [];
+  // Keep existing "Collect Evidence: X" tasks in sync with their evidence
+  // item (found 9/28): changing an item's collection month used to leave the
+  // task on the old month, and removing an item left an orphan task on
+  // everyone's list. The evidence item's month is the source of truth; who
+  // the task is assigned to is kept as the team set it.
+  const evMonthByTask = new Map();
+  (g.evidenceItems || []).forEach(e => {
+    if (e.text && e.text.trim()) evMonthByTask.set(`Collect Evidence: ${e.text.trim()}`, e.collectMonth || '');
+  });
+  g.roles = g.roles.filter(r => {
+    const resp = (r.responsibility || '').trim();
+    if (!resp.startsWith('Collect Evidence: ')) return true;
+    if (!evMonthByTask.has(resp)) return false;          // evidence removed
+    const mo = evMonthByTask.get(resp);
+    if (!mo) return false;                                // month cleared
+    r.byWhen = mo;                                        // month changed
+    return true;
+  });
   const existingResp = new Set(g.roles.map(r => (r.responsibility || '').trim()));
   (g.evidenceItems || []).forEach(e => {
     if (!e.text || !e.text.trim() || !e.collectMonth) return;
