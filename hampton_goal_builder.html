@@ -377,6 +377,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 .toast.show{transform:translateY(0);opacity:1}
 .toast.success{background:var(--success);color:#fff}
 .toast.info{background:var(--hampton-blue);color:#fff}
+.toast.warn{background:#92400E;color:#fff;max-width:420px;line-height:1.4}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:none;align-items:flex-end;justify-content:center;padding-bottom:24px}
 .modal-overlay.open{display:flex}
 .modal{background:var(--surface);border-radius:16px;padding:28px;max-width:520px;width:90%;max-height:80vh;overflow-y:auto;box-shadow:0 -4px 40px rgba(0,0,0,0.18)}
@@ -400,6 +401,12 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
 .page-footer-text,.page-footer-text a{color:var(--text-light);text-decoration:none}
 .page-footer-text a:hover{color:var(--hampton-blue)}
 .page-footer-right::before{content:'·';margin-right:6px}
+/* Fall check-in: the top phase stepper uses summer-mode steps/labels that
+   don't match the check-in flow, and clicking it could land teams on
+   summer pages -- hide it; teams navigate with on-page buttons. (9/28) */
+body.checkin-mode #phaseStepper{display:none !important}
+/* "Who" name not on the team roster -- soft flag, not an error */
+input.roster-unknown{border-color:#F59E0B !important;background:#FFFBEB !important;box-shadow:0 0 0 2px rgba(245,158,11,0.25)}
 </style>
 </head>
 <body>
@@ -1108,6 +1115,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
       <div class="hero-eyebrow">Your Team Project Plan</div>
       <h2>Here's the plan you're leaving with today.</h2>
       <p id="checkinCloseoutIntro">Confirm your norms one more time, then see how your work adds up across goals and people.</p>
+      <button type="button" onclick="document.getElementById('checkinDownloadSection')?.scrollIntoView({behavior:'smooth', block:'start'})" style="margin-top:14px;background:#fff;color:var(--hampton-blue);border:none;border-radius:8px;padding:10px 16px;font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;position:relative;z-index:1;">⬇ Jump to your agenda &amp; Word doc</button>
     </div>
 
     <div class="section">
@@ -1167,7 +1175,7 @@ input[type=text]:focus,textarea:focus,select:focus{border-color:var(--hampton-bl
       <div class="section-header">
         <div class="section-number" style="background:var(--hampton-gold);color:var(--hampton-blue);">🗒️</div>
         <div>
-          <div class="section-title">Draft November Check-In Agenda</div>
+          <div class="section-title" id="checkinDownloadSection" style="scroll-margin-top:90px;">Draft November Check-In Agenda</div>
           <div class="section-desc">A starting point for your next meeting — built from what you set today. Edit it however you'd like.</div>
         </div>
       </div>
@@ -6620,12 +6628,56 @@ function confirmClear() {
   showToast('Goal cleared', 'info');
 }
 
-function showToast(msg, type) {
+let toastTimer = null;
+function showToast(msg, type, durationMs) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = 'toast show ' + type;
-  setTimeout(() => t.className = 'toast', 3000);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast', durationMs || 3000);
 }
+
+// ── Roster check for "Who" fields (check-in mode) ──────────────────────────
+// A typed name that doesn't exactly match the roster (e.g. "Jen" instead of
+// "Jen Morgan") creates a separate person in the task lists and Word doc.
+// When a Who field loses focus: fix capitalization silently; if the name
+// isn't on the roster, flag the field amber and suggest the likely match.
+// Never blocks -- a team may legitimately name someone outside the team.
+function checkRosterName(input) {
+  if (!document.body.classList.contains('checkin-mode')) return;
+  const val = (input.value || '').trim();
+  input.classList.remove('roster-unknown');
+  input.removeAttribute('title');
+  if (!val) return;
+  const roster = [ALL_TEAM_SENTINEL, ...getTeamMemberNames()];
+  const exact = roster.find(n => n.toLowerCase() === val.toLowerCase());
+  if (exact) {
+    if (exact !== input.value) {
+      input.value = exact;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    return;
+  }
+  const v = val.toLowerCase().replace(/[.,]/g, '');
+  const matches = roster.filter(n => {
+    if (n === ALL_TEAM_SENTINEL) return false;
+    const full = n.toLowerCase().replace(/[.,]/g, '');
+    const parts = full.split(/\s+/);
+    return full.startsWith(v) || parts.includes(v) || (v.length >= 3 && parts.some(pt => pt.startsWith(v)));
+  });
+  input.classList.add('roster-unknown');
+  input.title = "This name isn't on your team list. Pick a name from the dropdown so this task lands on the right person's list.";
+  const msg = matches.length === 1
+    ? `"${val}" isn't on your team list. Did you mean ${matches[0]}? Pick from the dropdown so tasks land on the right person.`
+    : `"${val}" isn't on your team list. Pick a name from the dropdown so tasks land on the right person's list.`;
+  showToast(msg, 'warn', 6000);
+}
+
+document.addEventListener('focusout', e => {
+  const el = e.target;
+  if (el && el.matches && el.matches('input[list="memberDatalist"]')) checkRosterName(el);
+});
 
 let goalAutosaveTimer = null;
 function queueGoalAutosave() {
