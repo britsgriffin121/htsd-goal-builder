@@ -1812,6 +1812,25 @@ function persistNovAgendaEdits() {
   if (textarea) localStorage.setItem('htsd_checkin_nov_agenda_' + teamName, textarea.value);
 }
 
+// "2026-11-17" -> "Tue, Nov 17, 2026". Returns the input unchanged if it
+// isn't an ISO date (so hand-typed or blank values pass through safely).
+function friendlyDate(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return iso || '';
+  const d = new Date(iso + 'T12:00:00');
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Current November agenda text for the Sheet backup: the team's saved edits
+// if any, otherwise the auto-generated draft (check-in mode only).
+function currentNovAgendaText() {
+  if (!document.body.classList.contains('checkin-mode')) return '';
+  const teamName = localStorage.getItem('htsd_checkin_team') || '';
+  const saved = localStorage.getItem('htsd_checkin_nov_agenda_' + teamName);
+  if (saved) return saved;
+  try { return buildNovAgendaText(); } catch (e) { return ''; }
+}
+
 function regenerateNovAgenda() {
   const textarea = document.getElementById('checkinNovAgendaText');
   if (!textarea) return;
@@ -1825,7 +1844,7 @@ function buildNovAgendaText() {
   const teamName = localStorage.getItem('htsd_checkin_team') || 'Your team';
   const novDate = pmData?.checkpointDates?.Nov;
   const janDate = pmData?.checkpointDates?.Jan;
-  const dateLine = novDate ? ` — ${novDate}` : '';
+  const dateLine = novDate ? ` — ${friendlyDate(novDate)}` : '';
 
   const lines = [];
   lines.push(`${teamName} — November Check-In Agenda${dateLine}`);
@@ -1838,7 +1857,7 @@ function buildNovAgendaText() {
   const novAndEarlier = new Set(['Aug','Sep','Oct','Nov']);
   const evidenceDue = [];
   goals.forEach((g, gi) => {
-    const label = g.goalNickname || g.teamGoal?.substring(0, 40) || `Goal ${gi + 1}`;
+    const label = `Goal ${gi + 1}`;
     (g.evidenceItems || []).forEach(e => {
       if (e.text && e.text.trim() && novAndEarlier.has(e.collectMonth)) {
         evidenceDue.push(`   - ${label}: ${e.text.trim()}${e.collectMonth ? ' (' + e.collectMonth + ')' : ''}`);
@@ -1863,7 +1882,7 @@ function buildNovAgendaText() {
     }
   });
   goals.forEach((g, gi) => {
-    const label = g.goalNickname || g.teamGoal?.substring(0, 40) || `Goal ${gi + 1}`;
+    const label = `Goal ${gi + 1}`;
     (g.roles || []).forEach(r => {
       if (r.name && r.responsibility && novAndEarlier.has(r.byWhen)) {
         respDue.push(`   - ${r.name}: ${r.responsibility} (${label}${r.byWhen ? ', ' + r.byWhen : ''})`);
@@ -1888,7 +1907,7 @@ function buildNovAgendaText() {
   lines.push('');
   itemNum++;
 
-  lines.push(`${itemNum}. Confirm the January checkpoint date${janDate ? ` (currently set: ${janDate})` : ' (not yet set — lock this in today)'}`);
+  lines.push(`${itemNum}. Confirm the January checkpoint date${janDate ? ` (currently set: ${friendlyDate(janDate)})` : ' (not yet set — lock this in today)'}`);
   lines.push('');
 
   return lines.join('\n');
@@ -2065,7 +2084,7 @@ function buildTeamPlanDocxParagraphs() {
   const cadenceRows = PM_CHECKPOINT_MONTHS.map(mo => [
     mo,
     PM_CHECKPOINT_SHORT[mo] || mo,
-    PM_CHECKPOINT_TBD[mo] ? PM_TBD_DATE_LABEL : ((pmData?.checkpointDates?.[mo] || '').trim() || 'Not yet set')
+    PM_CHECKPOINT_TBD[mo] ? PM_TBD_DATE_LABEL : (friendlyDate((pmData?.checkpointDates?.[mo] || '').trim()) || 'Not yet set')
   ]);
   parts.push(docxTable(['Month', 'Focus', 'Date'], cadenceRows, [20, 45, 35], DOCX_NAVY));
 
@@ -2098,9 +2117,9 @@ function buildTeamPlanDocxParagraphs() {
     if (evidenceItems.length) {
       parts.push(docxParagraph('Evidence', { bold: true, color: DOCX_NAVY, spaceBefore: 160, caps: true, size: 18 }));
       parts.push(docxTable(
-        ['Evidence', 'Collect by'],
-        evidenceItems.map(e => [e.text, e.collectMonth || '—']),
-        [75, 25],
+        ['Evidence', 'Target benchmark', 'Collect by'],
+        evidenceItems.map(e => [e.text, (e.benchmark || '').trim() || '—', e.collectMonth || '—']),
+        [50, 32, 18],
         gc
       ));
     }
@@ -2224,6 +2243,14 @@ function buildTeamPlanDocxParagraphs() {
 }
 
 async function exportTeamPlanDocx() {
+  // Downloading the Word doc is the team's natural "we're done" moment, and
+  // in check-in mode it's the only export -- so also send a final (non-
+  // autosave) copy to the Sheet. Silent: a failed backup must never block
+  // the team from getting their document.
+  try {
+    const toLog = goals.filter(g => g.teamGoal || g.specificOutcome || g.selectedGoalNum);
+    if (toLog.length) logToSheet(toLog, { silent: true, pmData }).catch(() => {});
+  } catch (e) {}
   const teamName = localStorage.getItem('htsd_checkin_team') || 'Team';
   const schoolYear = localStorage.getItem('htsd_identity_year') || '2026–27';
   const bodyParagraphs = buildTeamPlanDocxParagraphs();
@@ -2568,6 +2595,15 @@ function initGoals() {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
         goals = parsed;
+        // Resuming a check-in session: turn check-in mode back on BEFORE
+        // anything below calls switchPhase(). Otherwise switchPhase() runs
+        // its summer-mode saveCurrentGoal(), which writes the hidden full-
+        // edit form over the active goal -- found 9/28: a simple page
+        // refresh mid-check-in replaced the last-edited goal's text.
+        if (hasLaunched && localStorage.getItem('htsd_checkin_team') &&
+            goals.some(g => g.teamGoal || g.specificOutcome)) {
+          document.body.classList.add('checkin-mode');
+        }
         activeGoalIdx = parseInt(localStorage.getItem('htsd_active_goal')||'0') || 0;
         if (activeGoalIdx >= goals.length) activeGoalIdx = 0;
         renderGoalTabs();
@@ -2601,6 +2637,20 @@ function saveCurrentGoal() {
 function persistGoals() {
   localStorage.setItem('htsd_goals_v2', JSON.stringify(goals));
   localStorage.setItem('htsd_active_goal', String(activeGoalIdx));
+  // Check-in mode: also keep a per-team copy, keyed by the team the goals
+  // actually belong to (goals[0].teamName, not htsd_checkin_team, so a save
+  // mid-team-switch can never file one team's goals under another's name).
+  // Without this, picking a different team on the same browser overwrote
+  // htsd_goals_v2 and permanently lost the first team's evidence/roles/
+  // added goals (found in 9/28 pre-session testing: Poff -> Wyland -> Poff).
+  if (document.body.classList.contains('checkin-mode')) {
+    const owner = goals[0]?.teamName;
+    if (owner) localStorage.setItem(teamGoalsStorageKey(owner), JSON.stringify(goals));
+  }
+}
+
+function teamGoalsStorageKey(teamName) {
+  return 'htsd_goals_v2__' + teamName;
 }
 
 // ── Team PM Data ────────────────────────────────────────────────────────────
@@ -3171,7 +3221,7 @@ function returnToStart() {
     // use the in-page modal (same one removeGoal()/clearAll() use) instead.
     showConfirmModal(
       'Return to the start screen?',
-      'Your work is saved — you can pick "Continue planning" and your team again to pick up right where you left off.',
+      'Your work is saved on this device — choose "Finalize Our Plan" and your school again to pick up right where you left off.',
       'Yes, return to start',
       () => {
         document.getElementById('confirmClearModal')?.classList.remove('open');
@@ -3184,8 +3234,13 @@ function returnToStart() {
 }
 
 function goReturnToStart() {
-  document.body.classList.remove('checkin-mode');
+  // Order matters: leave the phase WHILE still in check-in mode. switchPhase()
+  // only skips its saveCurrentGoal() in check-in mode; removing the class
+  // first let it write the hidden full-edit form (still holding goal 1's
+  // data) over whichever goal was active -- found 9/28: "Change team" was
+  // silently replacing the last-edited goal's text with goal 1's.
   switchPhase('launch');
+  document.body.classList.remove('checkin-mode');
   document.getElementById('checkinPickerShell').style.display = 'none';
   document.getElementById('fullLaunchShell').style.display = 'none';
   document.getElementById('modeGateShell').style.display = '';
@@ -3209,7 +3264,21 @@ function startCheckin(teamName) {
   // goals aren't already loaded (so re-entering check-in doesn't duplicate).
   const alreadyLoaded = goals.length && goals[0].teamName === teamName &&
     goals.some(g => g.teamGoal);
+  // Returning to a team this browser already worked on (e.g. after switching
+  // to another team and back): restore that team's saved work instead of
+  // resetting it to the spring snapshot.
+  let restoredTeamGoals = null;
   if (!alreadyLoaded) {
+    try {
+      const savedTeam = JSON.parse(localStorage.getItem(teamGoalsStorageKey(teamName)) || 'null');
+      if (Array.isArray(savedTeam) && savedTeam.length && savedTeam[0].teamName === teamName) restoredTeamGoals = savedTeam;
+    } catch (e) {}
+  }
+  if (restoredTeamGoals) {
+    goals = restoredTeamGoals;
+    activeGoalIdx = 0;
+    persistGoals();
+  } else if (!alreadyLoaded) {
     goals = springGoals.map(sg => {
       const g = getBlankGoal();
       Object.assign(g, {
@@ -3285,7 +3354,12 @@ const CHECKIN_VIEW_IDS = [
   'checkinKickoffView', 'checkinSummaryView', 'checkinGoalTextEditorView',
   'checkinEvidenceView', 'checkinRolesView'
 ];
+// True only while a check-in team has deliberately opened "Edit full goal
+// details" -- the one time the hidden full-edit form is really in use.
+let checkinFullEditOpen = false;
+
 function hideAllCheckinViews() {
+  checkinFullEditOpen = false;
   CHECKIN_VIEW_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
 }
 
@@ -3378,10 +3452,12 @@ function renderCheckinKickoffFraming(teamName) {
     greetingEl.textContent = teamName ? `Welcome back, ${teamName.replace(/\s*\([^)]*\)/, '')}.` : 'Welcome back, team.';
   }
   if (framingEl) {
-    const leadLine = roster?.lead ? ` — ${roster.lead}` : '';
     const memberCount = roster?.members?.length || 0;
+    const who = roster?.lead
+      ? `You, ${roster.lead}, and your ${memberCount}-person design team`
+      : `You and your ${memberCount}-person design team`;
     framingEl.textContent = memberCount
-      ? `You and your ${memberCount}-person design team${leadLine} are picking up the work you started last spring. Today isn't a fresh start — it's a checkpoint in a year-long rhythm.`
+      ? `${who} are picking up the work you started last spring. Today isn't a fresh start — it's a checkpoint in a year-long rhythm.`
       : `You're picking up the work your design team started last spring. Today isn't a fresh start — it's a checkpoint in a year-long rhythm.`;
   }
 }
@@ -3653,6 +3729,7 @@ function openFullEditFromCheckin() {
   if (checkinStep === 'evidence') saveCheckinEvidenceStep();
   if (checkinStep === 'roles') saveCheckinRolesStep();
   hideAllCheckinViews();
+  checkinFullEditOpen = true;
   document.getElementById('goalNav').style.display = '';
   document.getElementById('fullEditLayout').style.display = '';
   renderGoalTabs();
@@ -3777,7 +3854,7 @@ function renderCheckinAddedEvidence(g) {
         <label>When will you collect this?</label>
         <select class="ev-collect-month" onchange="saveCheckinGoal()">
           <option value="" ${!e.collectMonth ? 'selected' : ''}>Choose a month…</option>
-          ${months.map(mo => `<option value="${mo}"${mo === e.collectMonth ? ' selected' : ''}>${mo}</option>`).join('')}
+          ${checkinMonths(e.collectMonth).map(mo => `<option value="${mo}"${mo === e.collectMonth ? ' selected' : ''}>${mo}</option>`).join('')}
         </select>
       </div>
     </div>`).join('');
@@ -3792,7 +3869,11 @@ function renderCheckinAddedEvidence(g) {
 function renderCheckinRoles() {
   const g = goals[activeGoalIdx];
   const tbody = document.getElementById('checkinRolesTable');
-  const roles = (g.roles && g.roles.length) ? g.roles : [{name:'',responsibility:'',byWhen:''}];
+  // Hide empty placeholder rows left in saved data (they showed up as blank
+  // lines above the real tasks); show a single blank row only if nothing's
+  // there yet. Empty rows are dropped on save anyway.
+  const filled = (g.roles || []).filter(r => (r.name || '').trim() || (r.responsibility || '').trim());
+  const roles = filled.length ? filled : [{name:'',responsibility:'',byWhen:''}];
   tbody.innerHTML = roles.map(r => `<tr>
     <td><input type="text" class="role-resp-input" value="${(r.responsibility||'').replace(/"/g,'&quot;')}" placeholder="What needs to happen?" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td>
     <td><input type="text" class="role-name-input" value="${(r.name||'').replace(/"/g,'&quot;')}" placeholder="Who" list="memberDatalist" oninput="saveCheckinGoal();renderCheckinSummaryBadgeOnly()" /></td>
@@ -3852,6 +3933,7 @@ function goalCompletionMonthFallback() {
 const AUTOSAVE_INTERVAL_MS = 45000; // 45s
 let autosaveTimer = null;
 let autosaveInFlight = false;
+let lastAutosaveSig = null;
 
 function startSheetAutosave() {
   const el = document.getElementById('autosaveIndicator');
@@ -3883,10 +3965,20 @@ function runSheetAutosave() {
   // Check-in goals are kept current via saveCheckinGoal() as the team types.
   const validGoals = goals.filter(g => g.teamGoal || g.specificOutcome || g.selectedGoalNum);
   if (!validGoals.length) return;
+  // Skip the save if nothing changed since the last successful one, so an
+  // idle tab doesn't add a full copy of the team's plan to the Sheet every
+  // 45 seconds (5 teams x a 2-hour session would otherwise be thousands of
+  // duplicate rows).
+  const sig = JSON.stringify([validGoals, pmData, currentNovAgendaText()]);
+  if (sig === lastAutosaveSig) return;
   autosaveInFlight = true;
   setAutosaveState('saving');
   logToSheet(validGoals, { autosave: true, silent: true, pmData })
-    .then(() => setAutosaveState('saved'))
+    .then(res => {
+      if (res && res.ok === false) throw new Error('HTTP ' + res.status);
+      lastAutosaveSig = sig;
+      setAutosaveState('saved');
+    })
     .catch(() => setAutosaveState('error'))
     .finally(() => { autosaveInFlight = false; });
 }
@@ -4216,8 +4308,16 @@ const MONTH_ORDER = {Sum:0,Aug:1,Sep:2,Oct:3,Nov:4,Dec:5,Jan:6,Feb:7,Mar:8,Apr:9
 
 // Options for the Roles & Responsibilities "By when" dropdown — the district's
 // school-year months, plus "Ongoing" for standing responsibilities with no end date.
+// In fall check-in mode, Summer and August are already in the past, so
+// they're hidden from month pickers (unless a saved value already uses one,
+// so existing data never silently disappears from its dropdown).
+function checkinMonths(selected) {
+  if (!document.body.classList.contains('checkin-mode')) return months;
+  return months.filter(mo => (mo !== 'Sum' && mo !== 'Aug') || mo === selected);
+}
+
 function roleWhenOptionsHtml(selected) {
-  const opts = months.map(mo => `<option value="${mo}"${mo === selected ? ' selected' : ''}>${mo}</option>`).join('');
+  const opts = checkinMonths(selected).map(mo => `<option value="${mo}"${mo === selected ? ' selected' : ''}>${mo}</option>`).join('');
   return opts + `<option value="Ongoing"${selected === 'Ongoing' ? ' selected' : ''}>Ongoing</option>`;
 }
 
@@ -5039,8 +5139,13 @@ function update() {
   // Update remove/clear link visibility
   updateRemoveClearLink();
 
-  // Autosave to multi-goal storage
-  if (goals && goals.length > 0) {
+  // Autosave to multi-goal storage -- but in check-in mode ONLY when the team
+  // is actually using the full-edit form ("Edit full goal details").
+  // Otherwise this form is hidden and only repainted as a side effect (page
+  // load, team pick), and saving it wrote its partial data over the active
+  // goal -- found 9/28: a refresh replaced an added goal's text with goal 1's.
+  const checkinHiddenForm = document.body.classList.contains('checkin-mode') && !checkinFullEditOpen;
+  if (goals && goals.length > 0 && !checkinHiddenForm) {
     goals[activeGoalIdx] = getFormData();
     persistGoals();
     renderGoalTabs();
@@ -5169,10 +5274,12 @@ function buildGoalId(teamName, goalNum, submissionTimestamp) {
 // success/failure differently instead of duplicating the request logic.
 function logToSheet(goalsToLog, opts) {
   opts = opts || {};
-  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzYMWLCPTyz_2H5DHjKT8l-KeTivGndrG3s1kUMGIrb_4vMrIVZhvqy2XKztHF-baQDBQ/exec';
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzxtjpd4ETABB9G9Y6B9lSz_75XkN5SBmFxsMddqxwkEhcmAzc5D8eDRrOrl8ieldFSxQ/exec';
   if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return Promise.resolve();
-  const validGoals = goalsToLog.filter(g => g.selectedGoalNum);
-  validGoals.forEach(g => { if (!g.outcomeKey) console.warn('Goal missing outcomeKey:', g.teamGoal); });
+  // Goals added on the day in check-in mode have no district goal number
+  // (selectedGoalNum), so they used to be silently dropped here. Keep any
+  // goal with a number OR real goal text; new ones are labeled "New 1", etc.
+  const validGoals = goalsToLog.filter(g => g.selectedGoalNum || (g.teamGoal || '').trim());
   if (!validGoals.length) return Promise.resolve();
   const teamName = goalsToLog[0]?.teamName || 'Design Team';
   const submissionTimestamp = new Date().toISOString();
@@ -5187,9 +5294,12 @@ function logToSheet(goalsToLog, opts) {
       teamName,
       submissionTimestamp,
       autosave: !!opts.autosave,
-      goals: validGoals.map(g => ({
-        goalId:              buildGoalId(teamName, g.selectedGoalNum, submissionTimestamp),
-        goalNum:              g.selectedGoalNum,
+      goals: validGoals.map((g, i) => {
+        const goalNum = g.selectedGoalNum || `New ${validGoals.slice(0, i + 1).filter(x => !x.selectedGoalNum).length}`;
+        return {
+        goalId:              buildGoalId(teamName, goalNum, submissionTimestamp),
+        goalNum:              goalNum,
+        goalPosition:         goalsToLog.indexOf(g) + 1,
         outcomeKey:           g.outcomeKey || 'unmatched',
         specificOutcome:      g.specificOutcome || '',
         teamGoal:             g.teamGoal        || '',
@@ -5198,10 +5308,15 @@ function logToSheet(goalsToLog, opts) {
         goalCompletionMonth:  g.goalCompletionMonth || '',
         milestones:           g.milestones      || [],
         roles:                g.roles           || []
-      })),
+        };
+      }),
       // Team-level (not per-goal) Project Management data
       checkpointDates:  (opts.pmData && opts.pmData.checkpointDates)  || {},
-      crossGoalRoles:   (opts.pmData && opts.pmData.crossGoalRoles)   || []
+      crossGoalRoles:   (opts.pmData && opts.pmData.crossGoalRoles)   || [],
+      // Added 9/28 so the fall check-in round is fully captured for v2 scoping
+      mode:             document.body.classList.contains('checkin-mode') ? 'checkin' : 'summer',
+      teamMembers:      (localStorage.getItem('htsd_identity_members') || ''),
+      novAgenda:        currentNovAgendaText()
     })
   });
 
@@ -6485,6 +6600,15 @@ function queueGoalAutosave() {
   goalAutosaveTimer = setTimeout(saveCurrentGoal, 300);
 }
 window.addEventListener('beforeunload', () => {
+  // Check-in mode keeps goals current as the team types (saveCheckin*Step),
+  // and the full-edit form is hidden -- saving it here on refresh/close
+  // overwrote the active goal with stale form data (found 9/28). Only flush
+  // the form when it's the view actually in use.
+  if (document.body.classList.contains('checkin-mode')) {
+    if (checkinFullEditOpen) saveCurrentGoal();
+    else if (typeof saveCheckinGoal === 'function') saveCheckinGoal();
+    return;
+  }
   saveCurrentGoal();
 });
 
